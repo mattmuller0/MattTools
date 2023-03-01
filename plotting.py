@@ -23,17 +23,16 @@ import scipy.stats as st
 import statsmodels.stats.api as sms
 from scipy.stats import kruskal, zscore
 
-##########
-# Set/Append Working directory
-sys.path.append('/Users/muller/Documents/RugglesLab')
-
-
-##########
-# Import Functions
-from MattTools import mean_confidence_interval
-
-##########
+#####################
 # Code Below
+def mean_confidence_interval(data, confidence=0.95):
+    a = 1.0 * np.array(data)
+    n = len(a)
+    m, se = np.mean(a), st.sem(a)
+    h = se * st.t.ppf((1 + confidence) / 2., n-1)
+    low, high = st.t.interval(confidence, len(data)-1, loc=np.mean(data), scale=st.sem(data))
+    return m, low, high
+
 
 def plot_scree(
     pca : PCA(), components = 50, 
