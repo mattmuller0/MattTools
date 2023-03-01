@@ -30,7 +30,7 @@ sys.path.append('/Users/muller/Documents/RugglesLab')
 
 ##########
 # Import Functions
-from Pytools.stats import mean_confidence_interval
+from MattTools import mean_confidence_interval
 
 ##########
 # Code Below
