@@ -65,10 +65,10 @@ def test_models(models, X, y, cv_folds=5, scoring='roc_auc', random_state=100):
 
 
 
-# Function to plot the results of the test_models function with a boxplot
-def plot_model_results(results, figsize=(10, 10)):
+# Function to plot the results of the test_models function with a barplot mean and error bars
+def plot_model_results(results, figsize=(12, 8)):
     '''
-    Summary: Function to plot the results of the test_models function with a boxplot
+    Summary: Function to plot the results of the test_models function with a barplot mean and error bars
 
     results (pd.DataFrame) : dataframe of model metrics
     figsize (tuple) : size of the plot
@@ -78,15 +78,14 @@ def plot_model_results(results, figsize=(10, 10)):
     # Create a figure
     fig, ax = plt.subplots(figsize=figsize)
     # Plot the results
-    sns.boxplot(x='model', y='mean', data=results, ax=ax)
+    sns.barplot(x='model', y='mean', data=results, yerr=results['std'], ax=ax)
     # Set the title
-    ax.set_title('Model Comparison')
-    # Set the x label
+    ax.set_title('Model Results')
+    # Set the x and y labels
     ax.set_xlabel('Model')
-    # Set the y label
-    ax.set_ylabel('ROC AUC')
-    # Return the figure
-    return fig
+    ax.set_ylabel('Mean Score')
+    # Show the plot
+    plt.show()
 
 # Function to plot the ROC curves of each model
 def plot_roc_curves(models, X, y, figsize=(10, 10)):
