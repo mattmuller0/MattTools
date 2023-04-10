@@ -78,7 +78,7 @@ def plot_model_results(results, figsize=(10, 10), y='mean', ci='std'):
     # Create a figure
     fig, ax = plt.subplots(figsize=figsize)
     # Plot the results
-    sns.barplot(x='model', y=y data=results, ax=ax, ci=ci)
+    sns.barplot(x='model', y=y, data=results, ax=ax, ci=ci)
     # Set the title
     ax.set_title('Model Results')
     # Set the x and y labels
