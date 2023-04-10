@@ -7,6 +7,6 @@ setup(name="MattTools",
       author="Matthew Muller",
       author_email="matt.alex.muller@gmail.com", 
       license="MIT",
-      packages=[find_packages()],
+      packages=[find_packages(where="src")],
       install_requires=[],
       zip_safe=False)
