@@ -8,6 +8,6 @@ setup(
       author="Matthew Muller",
       author_email="matt.alex.muller@gmail.com", 
       license="MIT",
-      packages=find_packages(where="tools/*"),
+      packages=find_packages(),
       install_requires=[]
       )
