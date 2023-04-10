@@ -27,14 +27,14 @@ from scipy.stats import kruskal, zscore
 
 
 # Function to test various models and return the metrics as a dataframe
-def test_models(models, X, y, cv=5, scoring='roc_auc', random_state=100):
+def test_models(models, X, y, cv_folds=5, scoring='roc_auc', random_state=100):
     '''
     Summary: Function to test various models and return the metrics as a dataframe
 
     models (dict) : dictionary of models to test
     X (np.array) : numpy array of feature data
     y (np.array) : numpy array of target data
-    cv (int) : number of cross validation folds
+    cv_folds (int) : number of cross validation folds
     scoring (str) : scoring metric to use
     random_state (int) : random state to set
 
@@ -49,7 +49,7 @@ def test_models(models, X, y, cv=5, scoring='roc_auc', random_state=100):
         # Set the random state
         model_clone.random_state = random_state
         # Create a cross validation object
-        cv = StratifiedKFold(n_splits=cv, shuffle=True, random_state=random_state)
+        cv = StratifiedKFold(n_splits=cv_folds, shuffle=True, random_state=random_state)
         # Fit the model
         model_clone.fit(X, y)
         # Get the cross validation scores
@@ -58,6 +58,7 @@ def test_models(models, X, y, cv=5, scoring='roc_auc', random_state=100):
         results = results.append({'model': model_name, 'mean': scores.mean(), 'std': scores.std(), 'min': scores.min(), 'max': scores.max()}, ignore_index=True)
     # Return the results
     return results
+
 
 
 # Function to plot the results of the test_models function
