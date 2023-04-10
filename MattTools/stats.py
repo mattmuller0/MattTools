@@ -1,9 +1,11 @@
-##########
+######################################################################
+# 
+#
+# 
+###################################################################### Stats Functions to help 
 # Matthew Muller
 # 11/24/2022
-#
-# Stats Functions to help 
-##########
+
 
 ##########
 # Library Imports
@@ -19,9 +21,6 @@ from sklearn.metrics import roc_auc_score, roc_curve, auc
 ##########
 # Set/Append Working directory
 sys.path.append('.')
-
-##########
-# Import Functions
 
 ##########
 # Code Below
