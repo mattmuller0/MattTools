@@ -178,7 +178,7 @@ def plot_confusion_matrices(models, X, y, figsize=(10, 10)):
         # Get the confusion matrix
         cm = confusion_matrix(y, y_pred)
         # Plot the confusion matrix on the appropriate subplot
-        disp = ConfusionMatrixDisplay(confusion_matrix=cm, display_labels=model.classes_, colorbar=False)
+        disp = ConfusionMatrixDisplay(confusion_matrix=cm, display_labels=model.classes_)
         disp.plot(ax=axes[row_idx, col_idx])
         # Set the title
         axes[row_idx, col_idx].set_title(model_name)
