@@ -83,16 +83,22 @@ def set_random_seed(seed=np.random.randint(1, 10000)):
     except:
         pass
 
-# Hide warnings based on the warning type (default to all warnings)
+# Hide warnings based on the warning type (default to all warnings) with an option to show warnings
 def hide_warnings(warning_type='all'):
     '''
-    Summary: Function to hide warnings
+    Summary: Function to hide warnings based on the warning type (default to all warnings) with an option to show warnings
 
-    warning_type (str) : string value of the warning type to hide (default = 'all')
+    warning_type (str) : string value of the warning type to hide
     '''
+    # Hide warnings
     if warning_type == 'all':
         import warnings
         warnings.filterwarnings('ignore')
     else:
         import warnings
         warnings.filterwarnings('ignore', category=warning_type)
+
+    # Show warnings
+    if warning_type == 'none':
+        import warnings
+        warnings.filterwarnings('default')
