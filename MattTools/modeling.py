@@ -65,13 +65,12 @@ def test_models(models, X, y, cv_folds=5, scoring='roc_auc', random_state=100):
 
 
 
-# Function to plot the results of the test_models function
-def plot_model_results(results, title='Model Results', figsize=(10, 5)):
+# Function to plot the results of the test_models function with mean and confidence intervals
+def plot_model_results(results, figsize=(10, 10)):
     '''
-    Summary: Function to plot the results of the test_models function
+    Summary: Function to plot the results of the test_models function with mean and confidence intervals
 
     results (pd.DataFrame) : dataframe of model metrics
-    title (str) : title of the plot
     figsize (tuple) : size of the plot
 
     output (None) : None
@@ -79,14 +78,14 @@ def plot_model_results(results, title='Model Results', figsize=(10, 5)):
     # Create a figure
     fig, ax = plt.subplots(figsize=figsize)
     # Plot the results
-    sns.barplot(x='model', y='mean', data=results, ax=ax)
+    sns.barplot(x='model', y='mean', data=results, ax=ax, ci='sd')
     # Set the title
-    ax.set_title(title)
+    ax.set_title('Model Results')
     # Set the x and y labels
     ax.set_xlabel('Model')
-    ax.set_ylabel('Mean AUC Score')
-    # Set the x tick labels
-    ax.set_xticklabels(ax.get_xticklabels(), rotation=45, horizontalalignment='right')
+    ax.set_ylabel('Mean AUC')
+    # Rotate the x labels
+    ax.set_xticklabels(ax.get_xticklabels(), rotation=45)
     # Show the plot
     plt.show()
 
