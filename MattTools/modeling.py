@@ -150,7 +150,7 @@ def plot_roc_curves(models, X, y, figsize=(10, 10)):
     # Show the plot
     plt.show()
 
-# Function to plot the confusion matrix of a dictionary of models in a grid
+# Function to plot the confusion matrix of a dictionary of models in a grid square
 def plot_confusion_matrices(models, X, y, figsize=(10, 10)):
     '''
     Summary: Function to plot the confusion matrix of a dictionary of models in a grid
@@ -162,20 +162,28 @@ def plot_confusion_matrices(models, X, y, figsize=(10, 10)):
 
     output (None) : None
     '''
-    # Create a figure
-    fig, ax = plt.subplots(figsize=figsize)
-    # Iterate through the models
+    # Calculate the number of rows and columns based on the number of models
+    num_models = len(models)
+    nrows = int(num_models ** 0.5)
+    ncols = int(np.ceil(num_models / nrows))
+    # Create a figure with subplots
+    fig, axes = plt.subplots(nrows=nrows, ncols=ncols, figsize=figsize)
+    # Iterate through the models and subplots
     for i, (model_name, model) in enumerate(models.items()):
-        # Fit the model
-        model.fit(X, y)
+        # Calculate the row and column index of the subplot
+        row_idx = i // ncols
+        col_idx = i % ncols
         # Get the predicted values
         y_pred = model.predict(X)
         # Get the confusion matrix
         cm = confusion_matrix(y, y_pred)
-        # Plot the confusion matrix
+        # Plot the confusion matrix on the appropriate subplot
         disp = ConfusionMatrixDisplay(confusion_matrix=cm, display_labels=model.classes_)
-        disp.plot(ax=ax[i])
+        disp.plot(ax=axes[row_idx, col_idx])
         # Set the title
-        ax[i].set_title(model_name)
+        axes[row_idx, col_idx].set_title(model_name)
+    # Adjust spacing between subplots
+    plt.subplots_adjust(hspace=0.4, wspace=0.4)
     # Show the plot
     plt.show()
+
