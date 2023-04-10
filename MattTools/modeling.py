@@ -15,7 +15,6 @@ import numpy as np
 import pandas as pd
 import sys
 
-from sklearn.decomposition import PCA, KernelPCA, NMF
 from sklearn.metrics import RocCurveDisplay, confusion_matrix, ConfusionMatrixDisplay
 from sklearn.metrics import roc_auc_score, roc_curve, auc
 from sklearn.model_selection import StratifiedKFold, KFold
