@@ -26,8 +26,33 @@ import statsmodels.stats.api as sms
 from scipy.stats import kruskal, zscore
 
 
+# Function to train a dictionary of models and return the models
+def train_models(models, X, y, random_state=100):
+    '''
+    Summary: Function to train a dictionary of models and return the models
+
+    models (dict) : dictionary of models to test
+    X (np.array) : numpy array of feature data
+    y (np.array) : numpy array of target data
+    random_state (int) : random state to set
+
+    output (dict) : dictionary of trained models
+    '''
+    # Iterate through the models
+    for model_name, model in models.items():
+        # Create a clone of the model
+        model_clone = clone(model)
+        # Set the random state
+        model_clone.random_state = random_state
+        # Fit the model
+        model_clone.fit(X, y)
+        # Replace the model with the fitted model
+        models[model_name] = model_clone
+    # Return the models
+    return models
+
 # Function to test various models and return the metrics as a dataframe
-def test_models(models, X, y, cv_folds=5, scoring='roc_auc', random_state=100):
+def test_models(models, X, y, cv_folds=5, scoring='roc_auc', random_state=100, pretrained=False):
     '''
     Summary: Function to test various models and return the metrics as a dataframe
 
@@ -44,16 +69,18 @@ def test_models(models, X, y, cv_folds=5, scoring='roc_auc', random_state=100):
     results = pd.DataFrame(columns=['model', 'mean', 'std', 'min', 'max'])
     # Iterate through models
     for model_name, model in models.items():
-        # Create a clone of the model
-        model_clone = clone(model)
+        # Create a clone of the model if it is not pretrained
+        if not pretrained: 
+            model = clone(model)
         # Set the random state
-        model_clone.random_state = random_state
+        model.random_state = random_state
         # Create a cross validation object
         cv = StratifiedKFold(n_splits=cv_folds, shuffle=True, random_state=random_state)
-        # Fit the model
-        model_clone.fit(X, y)
+        # Fit the model only if it is not pretrained
+        if not pretrained:
+            model.fit(X, y)
         # Get the cross validation scores
-        scores = cross_val_score(model_clone, X, y, cv=cv, scoring=scoring)
+        scores = cross_val_score(model, X, y, cv=cv, scoring=scoring)
         # Concat the results to the dataframe
         results = pd.concat([results, pd.DataFrame({'model': model_name,
                                                     'mean': scores.mean(),
@@ -103,12 +130,10 @@ def plot_roc_curves(models, X, y, figsize=(10, 10)):
     fig, ax = plt.subplots(figsize=figsize)
     # Iterate through the models
     for model_name, model in models.items():
-        # Create a clone of the model
-        model_clone = clone(model)
         # Fit the model
-        model_clone.fit(X, y)
+        model.fit(X, y)
         # Get the predicted probabilities
-        y_pred = model_clone.predict_proba(X)[:, 1]
+        y_pred = model.predict_proba(X)[:, 1]
         # Get the ROC curve
         fpr, tpr, thresholds = roc_curve(y, y_pred)
         # Get the AUC
@@ -124,3 +149,33 @@ def plot_roc_curves(models, X, y, figsize=(10, 10)):
     ax.legend()
     # Show the plot
     plt.show()
+
+# Function to plot the confusion matrix of a dictionary of models
+def plot_confusion_matrices(models, X, y, figsize=(10, 10)):
+    '''
+    Summary: Function to plot the confusion matrix of a dictionary of models
+
+    models (dict) : dictionary of models to test
+    X (np.array) : numpy array of feature data
+    y (np.array) : numpy array of target data
+    figsize (tuple) : size of the plot
+
+    output (None) : None
+    '''
+    # Create a figure
+    fig, ax = plt.subplots(figsize=figsize)
+    # Iterate through the models
+    for model_name, model in models.items():
+        # Fit the model
+        model.fit(X, y)
+        # Get the predicted probabilities
+        y_pred = model.predict(X)
+        # Get the confusion matrix
+        cm = confusion_matrix(y, y_pred)
+        # Plot the confusion matrix
+        disp = ConfusionMatrixDisplay(confusion_matrix=cm, display_labels=model.classes_)
+        disp.plot(ax=ax, cmap='Blues')
+        # Set the title
+        ax.set_title(f'{model_name} Confusion Matrix')
+        # Show the plot
+        plt.show()
