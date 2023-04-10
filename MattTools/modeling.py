@@ -150,10 +150,10 @@ def plot_roc_curves(models, X, y, figsize=(10, 10)):
     # Show the plot
     plt.show()
 
-# Function to plot the confusion matrix of a dictionary of models
+# Function to plot the confusion matrix of a dictionary of models in a grid
 def plot_confusion_matrices(models, X, y, figsize=(10, 10)):
     '''
-    Summary: Function to plot the confusion matrix of a dictionary of models
+    Summary: Function to plot the confusion matrix of a dictionary of models in a grid
 
     models (dict) : dictionary of models to test
     X (np.array) : numpy array of feature data
@@ -165,15 +165,17 @@ def plot_confusion_matrices(models, X, y, figsize=(10, 10)):
     # Create a figure
     fig, ax = plt.subplots(figsize=figsize)
     # Iterate through the models
-    for model_name, model in models.items():
-        # Get the predicted probabilities
+    for i, (model_name, model) in enumerate(models.items()):
+        # Fit the model
+        model.fit(X, y)
+        # Get the predicted values
         y_pred = model.predict(X)
         # Get the confusion matrix
         cm = confusion_matrix(y, y_pred)
         # Plot the confusion matrix
         disp = ConfusionMatrixDisplay(confusion_matrix=cm, display_labels=model.classes_)
-        disp.plot(ax=ax, cmap='Blues')
+        disp.plot(ax=ax[i])
         # Set the title
-        ax.set_title(f'{model_name} Confusion Matrix')
-        # Show the plot
-        plt.show()
+        ax[i].set_title(model_name)
+    # Show the plot
+    plt.show()
