@@ -55,7 +55,7 @@ def test_models(models, X, y, cv_folds=5, scoring='roc_auc', random_state=100):
         # Get the cross validation scores
         scores = cross_val_score(model_clone, X, y, cv=cv, scoring=scoring)
         # Append the results to the dataframe
-        results = results.append({'model': model_name, 'mean': scores.mean(), 'std': scores.std(), 'min': scores.min(), 'max': scores.max()}, ignore_index=True)
+        results = pd.concat(results, {'model': model_name, 'mean': scores.mean(), 'std': scores.std(), 'min': scores.min(), 'max': scores.max()}, ignore_index=True)
     # Return the results
     return results
 
