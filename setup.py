@@ -1,7 +1,7 @@
 from setuptools import find_packages, setup
 
 setup(name="MattTools",
-      version="0.1",
+      version="0.2",
       description="My package",
       url="https://github.com/matttmuller0/MattTools",
       author="Matthew Muller",
