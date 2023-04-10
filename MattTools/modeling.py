@@ -17,8 +17,9 @@ import sys
 
 from sklearn.decomposition import PCA, KernelPCA, NMF
 from sklearn.metrics import RocCurveDisplay, confusion_matrix, ConfusionMatrixDisplay
-from sklearn.metrics import roc_auc_score, roc_curve, auc, cross_val_score
+from sklearn.metrics import roc_auc_score, roc_curve, auc
 from sklearn.model_selection import StratifiedKFold, KFold
+from sklearn.model_selection import cross_val_score, cross_validate
 
 from sklearn.base import clone
 import scipy.stats as st
