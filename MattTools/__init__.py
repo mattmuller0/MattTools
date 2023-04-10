@@ -3,5 +3,5 @@ This is the module docstring. It should contain a brief overview of what the mod
 """
 
 # Import necessary modules
-from .plotting import *
-from .stats import *
+from . import plotting
+from . import stats

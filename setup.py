@@ -1,13 +1,25 @@
-from setuptools import find_packages, setup
+from setuptools import setup, find_packages
 
 setup(
-      name="MattTools",
-      version="0.2",
-      description="My package",
-      url="https://github.com/matttmuller0/MattTools",
-      author="Matthew Muller",
-      author_email="matt.alex.muller@gmail.com", 
-      license="MIT",
-      packages=find_packages(),
-      install_requires=[]
-      )
+    name='MattTools',
+    version='0.2.1',
+    packages=find_packages(),
+    install_requires=[
+            'numpy',
+            'matplotlib',
+            'pandas',
+            'scipy',
+            'seaborn',
+            'scikit-learn',
+            # add any other dependencies here
+            ],
+    author='Matthew Muller',
+    author_email='matt.alex.muller@gmail.com',
+    description='Some personal tools for data analysis',
+    url='https://github.com/matttmuller0/MattTools',
+    classifiers=[
+        'Programming Language :: Python :: 3',
+        'License :: OSI Approved :: MIT License',
+        'Operating System :: OS Independent',
+    ],
+)
