@@ -1,4 +1,4 @@
-from setuptools import setup
+from setuptools import find_packages, setup
 
 setup(name="MattTools",
       version="0.1",
@@ -7,6 +7,6 @@ setup(name="MattTools",
       author="Matthew Muller",
       author_email="matt.alex.muller@gmail.com", 
       license="MIT",
-      packages=[],
+      packages=[find_packages()],
       install_requires=[],
       zip_safe=False)
