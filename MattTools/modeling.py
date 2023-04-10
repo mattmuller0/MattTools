@@ -166,8 +166,6 @@ def plot_confusion_matrices(models, X, y, figsize=(10, 10)):
     fig, ax = plt.subplots(figsize=figsize)
     # Iterate through the models
     for model_name, model in models.items():
-        # Fit the model
-        model.fit(X, y)
         # Get the predicted probabilities
         y_pred = model.predict(X)
         # Get the confusion matrix
