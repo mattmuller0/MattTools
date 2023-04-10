@@ -52,7 +52,7 @@ def train_models(models, X, y, random_state=100):
     return models
 
 # Function to test various models and return the metrics as a dataframe
-def test_models(models, X, y, cv_folds=5, scoring='roc_auc', random_state=100, pretrained=False):
+def test_models(models, X, y, cv_folds=5, scoring='roc_auc', random_state=100, from_pretrained=False):
     '''
     Summary: Function to test various models and return the metrics as a dataframe
 
@@ -70,14 +70,14 @@ def test_models(models, X, y, cv_folds=5, scoring='roc_auc', random_state=100, p
     # Iterate through models
     for model_name, model in models.items():
         # Create a clone of the model if it is not pretrained
-        if not pretrained: 
+        if not from_pretrained: 
             model = clone(model)
         # Set the random state
         model.random_state = random_state
         # Create a cross validation object
         cv = StratifiedKFold(n_splits=cv_folds, shuffle=True, random_state=random_state)
         # Fit the model only if it is not pretrained
-        if not pretrained:
+        if not from_pretrained:
             model.fit(X, y)
         # Get the cross validation scores
         scores = cross_val_score(model, X, y, cv=cv, scoring=scoring)
