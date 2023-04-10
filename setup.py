@@ -4,7 +4,7 @@ setup(
     name='MattTools',
     version='0.2.1',
     packages=find_packages(),
-    install_requires=[
+    install_requires=[ 
             'numpy',
             'matplotlib',
             'pandas',
