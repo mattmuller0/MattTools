@@ -82,3 +82,17 @@ def set_random_seed(seed=np.random.randint(1, 10000)):
         torch.manual_seed(seed)
     except:
         pass
+
+# Hide warnings based on the warning type (default to all warnings)
+def hide_warnings(warning_type='all'):
+    '''
+    Summary: Function to hide warnings
+
+    warning_type (str) : string value of the warning type to hide (default = 'all')
+    '''
+    if warning_type == 'all':
+        import warnings
+        warnings.filterwarnings('ignore')
+    else:
+        import warnings
+        warnings.filterwarnings('ignore', category=warning_type)
