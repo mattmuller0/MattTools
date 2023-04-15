@@ -115,7 +115,7 @@ def plot_model_results(results, figsize=(12, 8)):
     plt.show()
 
 # Function to plot the ROC curves of each model
-def plot_roc_curves(models, X, y, figsize=(10, 10)):
+def plot_roc_curves(models, X, y, figsize=(10, 10), from_pretrained=True):
     '''
     Summary: Function to plot the ROC curves of each model
 
@@ -131,7 +131,9 @@ def plot_roc_curves(models, X, y, figsize=(10, 10)):
     # Iterate through the models
     for model_name, model in models.items():
         # Fit the model
-        model.fit(X, y)
+        if not from_pretrained:
+            model = clone(model)
+            model.fit(X, y)
         # Get the predicted probabilities
         y_pred = model.predict_proba(X)[:, 1]
         # Get the ROC curve
