@@ -169,9 +169,9 @@ def plot_prc_curves(models, X, y, figsize=(10, 10)):
         # Get the PRC curve
         precision, recall, _ = precision_recall_curve(y, y_pred)
         # Get the AUC
-        roc_auc = auc(fpr, tpr)
+        roc_auc = auc(precision, recall)
         # Plot the ROC curve
-        ax.plot(fpr, tpr, label=f'{model_name} (AUC = {roc_auc:0.2f})')
+        ax.plot(precision, recall, label=f'{model_name} (AUC = {roc_auc:0.2f})')
     # Set the title
     ax.set_title('PRC Curves')
     # Set the x and y labels
