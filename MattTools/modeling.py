@@ -151,7 +151,7 @@ def plot_roc_curves(models, X, y, figsize=(10, 10)):
 # Function to plot the ROC curves of each model
 def plot_prc_curves(models, X, y, figsize=(10, 10)):
     '''
-    Summary: Function to plot the ROC curves of each model
+    Summary: Function to plot the PRC curves of each model
 
     models (dict) : dictionary of models to test
     X (np.array) : numpy array of feature data
@@ -173,7 +173,7 @@ def plot_prc_curves(models, X, y, figsize=(10, 10)):
         # Plot the ROC curve
         ax.plot(fpr, tpr, label=f'{model_name} (AUC = {roc_auc:0.2f})')
     # Set the title
-    ax.set_title('ROC Curves')
+    ax.set_title('PRC Curves')
     # Set the x and y labels
     ax.set_xlabel('False Positive Rate')
     ax.set_ylabel('True Positive Rate')
