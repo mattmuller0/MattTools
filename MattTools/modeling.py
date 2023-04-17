@@ -16,7 +16,7 @@ import pandas as pd
 import sys
 
 from sklearn.metrics import RocCurveDisplay, confusion_matrix, ConfusionMatrixDisplay
-from sklearn.metrics import roc_auc_score, roc_curve, auc, precision_recall_curve
+from sklearn.metrics import roc_auc_score, roc_curve, auc, precision_recall_curve, average_precision_score
 from sklearn.model_selection import StratifiedKFold, KFold
 from sklearn.model_selection import cross_val_score, cross_validate
 
@@ -168,15 +168,15 @@ def plot_prc_curves(models, X, y, figsize=(10, 10)):
         y_pred = model.predict_proba(X)[:, 1]
         # Get the PRC curve
         precision, recall, _ = precision_recall_curve(y, y_pred)
-        # Get the AUC
-        roc_auc = auc(precision, recall)
+        # Get the average precision
+        avg_precision = average_precision_score(y, y_pred)
         # Plot the ROC curve
-        ax.plot(precision, recall, label=f'{model_name} (AUC = {roc_auc:0.2f})')
+        ax.plot(recall, precision, label=f'{model_name} (AUC = {ap:0.2f})')
     # Set the title
     ax.set_title('PRC Curves')
     # Set the x and y labels
-    ax.set_xlabel('Precision')
-    ax.set_ylabel('Recall')
+    ax.set_xlabel('False Positive Rate')
+    ax.set_ylabel('True Positive Rate')
     # Set the legend
     ax.legend()
     # Show the plot
