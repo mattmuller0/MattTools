@@ -16,7 +16,7 @@ import pandas as pd
 import sys
 
 from sklearn.metrics import RocCurveDisplay, confusion_matrix, ConfusionMatrixDisplay
-from sklearn.metrics import roc_auc_score, roc_curve, auc
+from sklearn.metrics import roc_auc_score, roc_curve, auc, precision_recall_curve
 from sklearn.model_selection import StratifiedKFold, KFold
 from sklearn.model_selection import cross_val_score, cross_validate
 
@@ -147,6 +147,41 @@ def plot_roc_curves(models, X, y, figsize=(10, 10)):
     ax.legend()
     # Show the plot
     plt.show()
+
+# Function to plot the ROC curves of each model
+def plot_prc_curves(models, X, y, figsize=(10, 10)):
+    '''
+    Summary: Function to plot the ROC curves of each model
+
+    models (dict) : dictionary of models to test
+    X (np.array) : numpy array of feature data
+    y (np.array) : numpy array of target data
+    figsize (tuple) : size of the plot
+
+    output (None) : None
+    '''
+    # Create a figure
+    fig, ax = plt.subplots(figsize=figsize)
+    # Iterate through the models
+    for model_name, model in models.items():
+        # Get the predicted probabilities
+        y_pred = model.predict_proba(X)[:, 1]
+        # Get the PRC curve
+        precision, recall, _ = precision_recall_curve(y, y_pred)
+        # Get the AUC
+        roc_auc = auc(fpr, tpr)
+        # Plot the ROC curve
+        ax.plot(fpr, tpr, label=f'{model_name} (AUC = {roc_auc:0.2f})')
+    # Set the title
+    ax.set_title('ROC Curves')
+    # Set the x and y labels
+    ax.set_xlabel('False Positive Rate')
+    ax.set_ylabel('True Positive Rate')
+    # Set the legend
+    ax.legend()
+    # Show the plot
+    plt.show()
+
 
 # Function to plot the confusion matrix of a dictionary of models in a grid square
 def plot_confusion_matrices(models, X, y, figsize=(10, 10)):
