@@ -175,8 +175,8 @@ def plot_prc_curves(models, X, y, figsize=(10, 10)):
     # Set the title
     ax.set_title('PRC Curves')
     # Set the x and y labels
-    ax.set_xlabel('Precision Rate')
-    ax.set_ylabel('Recall Rate')
+    ax.set_xlabel('Precision')
+    ax.set_ylabel('Recall')
     # Set the legend
     ax.legend()
     # Show the plot
