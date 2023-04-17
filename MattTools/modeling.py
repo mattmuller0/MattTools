@@ -171,7 +171,7 @@ def plot_prc_curves(models, X, y, figsize=(10, 10)):
         # Get the average precision
         avg_precision = average_precision_score(y, y_pred)
         # Plot the ROC curve
-        ax.plot(recall, precision, label=f'{model_name} (AUC = {ap:0.2f})')
+        ax.plot(recall, precision, label=f'{model_name} (AUC = {avg_precision:0.2f})')
     # Set the title
     ax.set_title('PRC Curves')
     # Set the x and y labels
