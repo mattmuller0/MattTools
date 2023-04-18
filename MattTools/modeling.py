@@ -166,17 +166,17 @@ def plot_prc_curves(models, X, y, figsize=(10, 10)):
     for model_name, model in models.items():
         # Get the predicted probabilities
         y_pred = model.predict_proba(X)[:, 1]
-        # Get the PRC curve
+        # Get the PR curve
         precision, recall, _ = precision_recall_curve(y, y_pred)
         # Get the average precision
         avg_precision = average_precision_score(y, y_pred)
-        # Plot the ROC curve
+        # Plot the PR curve
         ax.plot(recall, precision, label=f'{model_name} (AP = {avg_precision:0.2f})')
     # Set the title
     ax.set_title('PRC Curves')
     # Set the x and y labels
-    ax.set_xlabel('False Positive Rate')
-    ax.set_ylabel('True Positive Rate')
+    ax.set_xlabel('Recall')
+    ax.set_ylabel('Precision')
     # Set the legend
     ax.legend()
     # Show the plot
@@ -219,4 +219,3 @@ def plot_confusion_matrices(models, X, y, figsize=(10, 10)):
     plt.subplots_adjust(hspace=0.4, wspace=0.4)
     # Show the plot
     plt.show()
-
