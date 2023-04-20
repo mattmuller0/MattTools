@@ -76,9 +76,6 @@ def test_models(models, X, y, cv_folds=5, scoring='roc_auc', random_state=100, f
         model.random_state = random_state
         # Create a cross validation object
         cv = StratifiedKFold(n_splits=cv_folds, shuffle=True, random_state=random_state)
-        # Fit the model only if it is not pretrained
-        if not from_pretrained:
-            model.fit(X, y)
         # Get the cross validation scores
         scores = cross_val_score(model, X, y, cv=cv, scoring=scoring)
         # Concat the results to the dataframe
@@ -217,5 +214,54 @@ def plot_confusion_matrices(models, X, y, figsize=(10, 10)):
         axes[row_idx, col_idx].set_title(model_name)
     # Adjust spacing between subplots
     plt.subplots_adjust(hspace=0.4, wspace=0.4)
+    # Show the plot
+    plt.show()
+
+
+# Function to plot principal components decision boundaries
+def plot_pca_decision_boundaries(model, X, y, figsize=(10, 10), n_components=2):
+    '''
+    Summary: Function to plot principal components decision boundaries
+
+    model (sklearn model) : sklearn model or pipeline WITH PCA
+    X (np.array) : numpy array of feature data
+    y (np.array) : numpy array of target data
+    figsize (tuple) : size of the plot
+    n_components (int) : number of principal components to use (only supports 2 for now)
+
+    output (None) : None
+    '''
+    # Create a figure
+    fig, ax = plt.subplots(figsize=figsize)
+    # Fit the model
+    model.fit(X, y)
+    # Get the principal components
+    pca = model.named_steps['pca']
+    # Get the principal components
+    X_pca = pca.transform(X)
+    # Get the explained variance
+    explained_variance = pca.explained_variance_ratio_
+    # Get the first two principal components
+    X_pca = X_pca[:, :n_components]
+    # Get the minimum and maximum values for the first principal component
+    x_min, x_max = X_pca[:, 0].min() - 1, X_pca[:, 0].max() + 1
+    # Get the minimum and maximum values for the second principal component
+    y_min, y_max = X_pca[:, 1].min() - 1, X_pca[:, 1].max() + 1
+    # Create a meshgrid
+    xx, yy = np.meshgrid(np.arange(x_min, x_max, 0.1),
+                         np.arange(y_min, y_max, 0.1))
+    # Get the predicted values
+    Z = model.predict(np.c_[xx.ravel(), yy.ravel()])
+    # Reshape the predicted values
+    Z = Z.reshape(xx.shape)
+    # Plot the decision boundary
+    ax.contourf(xx, yy, Z, alpha=0.4)
+    # Plot the data points
+    ax.scatter(X_pca[:, 0], X_pca[:, 1], c=y, alpha=0.8)
+    # Set the title
+    ax.set_title('PCA Decision Boundaries')
+    # Set the x and y labels
+    ax.set_xlabel(f'Principal Component 1 ({explained_variance[0]:0.2f})')
+    ax.set_ylabel(f'Principal Component 2 ({explained_variance[1]:0.2f})')
     # Show the plot
     plt.show()
