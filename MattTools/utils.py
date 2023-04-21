@@ -119,49 +119,49 @@ def print_memory_usage():
     # Print the current memory usage
     print(f'Current memory usage is {resource.getrusage(resource.RUSAGE_SELF).ru_maxrss / 1000} MB')
 
-# # Function to time the execution of a function
-# def stopwatch(func, *args, **kwargs):
-#     '''
-#     Summary: Function to time the execution of a function
+# Function to time the execution of a function
+def stopwatch(func, *args, **kwargs):
+    '''
+    Summary: Function to time the execution of a function
 
-#     func (function) : function to time
-#     *args (tuple) : tuple of arguments to pass to the function
-#     **kwargs (dict) : dictionary of keyword arguments to pass to the function
-#     '''
-#     # Import the time module
-#     import time
+    func (function) : function to time
+    *args (tuple) : tuple of arguments to pass to the function
+    **kwargs (dict) : dictionary of keyword arguments to pass to the function
+    '''
+    # Import the time module
+    import time
 
-#     # Get the start time
-#     start = time.time()
+    # Get the start time
+    start = time.time()
 
-#     # Run the function
-#     func(*args, **kwargs)
+    # Run the function
+    func(*args, **kwargs)
 
-#     # Get the end time
-#     end = time.time()
+    # Get the end time
+    end = time.time()
 
-#     # Print the time elapsed
-#     print(f'Time elapsed: {end - start}')
+    # Print the time elapsed
+    print(f'Time elapsed: {end - start}')
 
-# # Function to profile the execution of a function
-# def profiler(func, *args, **kwargs):
-#     '''
-#     Summary: Function to profile the execution of a function
+# Function to profile the execution of a function
+def profiler(func, *args, **kwargs):
+    '''
+    Summary: Function to profile the execution of a function
 
-#     func (function) : function to profile
-#     *args (tuple) : tuple of arguments to pass to the function
-#     **kwargs (dict) : dictionary of keyword arguments to pass to the function
-#     '''
-#     # Import the cProfile module
-#     import cProfile
+    func (function) : function to profile
+    *args (tuple) : tuple of arguments to pass to the function
+    **kwargs (dict) : dictionary of keyword arguments to pass to the function
+    '''
+    # Import the cProfile module
+    import cProfile
 
-#     # Run the profiler
-#     cProfile.run(func(*args, **kwargs))
+    # Run the profiler
+    cProfile.run(func(*args, **kwargs))
 
-#     # Print the profiler stats
-#     profile = cProfile.Profile()
-#     result = profile.runcall(func, *args, **kwargs)
-#     profile.print_stats()
+    # Print the profiler stats
+    profile = cProfile.Profile()
+    result = profile.runcall(func, *args, **kwargs)
+    profile.print_stats()
 
-#     # Return the result
-#     return result
+    # Return the result
+    return result
