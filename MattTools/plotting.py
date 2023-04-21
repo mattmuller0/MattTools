@@ -448,7 +448,7 @@ def plot_roc_curve_ci(model, X, y, cv=StratifiedKFold(n_splits=5),
 #                        Plotting Training Functions
 #=================================================================================================
 # Function to plot ROC curve with mean and 95% confidence interval from cross-validation
-def plot_training_roc_curve_ci(model, X, y, cv=StratifiedKFold(n_splits=5)
+def plot_training_roc_curve_ci(model, X, y, cv=StratifiedKFold(n_splits=5),
                       title="Mean ROC curve with 95% Confidence Interval",
                       save_path=None, **kwargs):
     '''
