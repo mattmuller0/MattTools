@@ -507,7 +507,7 @@ def plot_training_roc_curve_ci(model, X, y, cv=StratifiedKFold(n_splits=5)
     mean_auc = auc(mean_fpr, mean_tpr)
     std_auc = np.std(aucs)
 
-    ci_tpr = 1.96 * np.std(tprs, axis=0) / np.sqrt(cv_splits)
+    ci_tpr = 1.96 * np.std(tprs, axis=0) / np.sqrt(cv.get_n_splits())
     tprs_upper = np.minimum(mean_tpr + ci_tpr, 1)
     tprs_lower = np.maximum(mean_tpr - ci_tpr, 0)
     ax.fill_between(mean_fpr, tprs_lower, tprs_upper, color="grey",
