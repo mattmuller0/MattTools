@@ -298,6 +298,9 @@ def plot_bootstrap_distributions(model, X, y, metric, figsize=(10, 10), n_bootst
     for i in range(n_bootstraps):
         # Get the indices for the bootstrap
         bootstrap_idx = np.random.choice(range(len(y)), len(y))
+        # Make sure the indices contain at least one of each class
+        while len(np.unique(y[bootstrap_idx])) < 2:
+            bootstrap_idx = np.random.choice(range(len(y)), len(y))
         # Get the bootstrap data
         X_bootstrap = X[bootstrap_idx]
         y_bootstrap = y[bootstrap_idx]
