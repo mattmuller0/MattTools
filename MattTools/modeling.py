@@ -265,3 +265,112 @@ def plot_pca_decision_boundaries(model, X, y, figsize=(10, 10), n_components=2):
     ax.set_ylabel(f'Principal Component 2 ({explained_variance[1]:0.2f})')
     # Show the plot
     plt.show()
+
+# Function to plot bootstrap distributions of a model and given metric
+def plot_bootstrap_distributions(model, X, y, metric, figsize=(10, 10), n_bootstraps=1000, plot = "hist"):
+    '''
+    Summary: Function to plot bootstrap distributions of a model and given metric
+
+    model (sklearn model) : sklearn model or pipeline
+    X (np.array) : numpy array of feature data
+    y (np.array) : numpy array of target data
+    metric (function) : function to calculate the metric
+    figsize (tuple) : size of the plot
+    n_bootstraps (int) : number of bootstraps to perform
+    plot (str) : type of plot to use (hist, kde, or roc_curve)
+
+    output (None) : None
+    '''
+    # Create a figure
+    fig, ax = plt.subplots(figsize=figsize)
+    # Fit the model
+    model.fit(X, y)
+    # Get the predicted values
+    y_pred = model.predict_proba(X)[:, 1]
+    # Get the metric for the model
+    try:
+        metric_score = metric(y, y_pred)
+    except:
+        print(f"Metric '{metric.__name__}' not supported for model '{model.__class__.__name__}'")
+    # Create an empty list to store the metric scores
+    metric_scores = []
+    # Iterate through the number of bootstraps
+    for i in range(n_bootstraps):
+        # Get the indices for the bootstrap
+        bootstrap_idx = np.random.choice(range(len(y)), len(y))
+        # Get the bootstrap data
+        X_bootstrap = X[bootstrap_idx]
+        y_bootstrap = y[bootstrap_idx]
+        # Fit the model
+        model.fit(X_bootstrap, y_bootstrap)
+        # Get the predicted values
+        y_pred = model.predict_proba(X_bootstrap)[:, 1]
+        # Get the metric for the model
+        metric_score = metric(y_bootstrap, y_pred)
+        # Append the metric score to the list
+        metric_scores.append(metric_score)
+    # Plot the distribution of the metric scores
+    if plot == "hist":
+        sns.histplot(metric_scores, ax=ax)
+    elif plot == "kde":
+        sns.kdeplot(metric_scores, ax=ax)
+    elif plot == "roc_curve":
+        # Get the false positive rate, true positive rate, and thresholds
+        fpr, tpr, thresholds = roc_curve(y, y_pred)
+        # Plot the ROC curve
+        ax.plot(fpr, tpr)
+        # Plot the baseline
+        ax.plot([0, 1], [0, 1], linestyle='--')
+        # Set the x and y limits
+        ax.set_xlim([0.0, 1.0])
+        ax.set_ylim([0.0, 1.0])
+        # Set the x and y labels
+        ax.set_xlabel('False Positive Rate')
+        ax.set_ylabel('True Positive Rate')
+    # Set the title
+    ax.set_title(f'{metric.__name__} Bootstrap Distribution')
+    # Show the plot
+    plt.show()
+
+
+
+# Function to plot the decision boundaries of a model
+def plot_decision_boundaries(model, X, y, figsize=(10, 10), feature_one = 0, feature_two = 1):
+    '''
+    ######### WIP!!! #########
+    Summary: Function to plot the decision boundaries of a model
+
+    model (sklearn model) : sklearn model or pipeline
+    X (np.array) : numpy array of feature data
+    y (np.array) : numpy array of target data
+    figsize (tuple) : size of the plot
+    n_features (int) : number of features to use (only supports 2 for now)
+
+    output (None) : None
+    '''
+    # Create a figure
+    fig, ax = plt.subplots(figsize=figsize)
+    # Fit the model
+    model.fit(X, y)
+    # Get the minimum and maximum values for the first feature
+    x_min, x_max = X[:, feature_one].min() - 1, X[:, 0].max() + 1
+    # Get the minimum and maximum values for the second feature
+    y_min, y_max = X[:, feature_two].min() - 1, X[:, 1].max() + 1
+    # Create a meshgrid
+    xx, yy = np.meshgrid(np.arange(x_min, x_max, 0.1),
+                         np.arange(y_min, y_max, 0.1))
+    # Get the predicted values
+    Z = model.predict(np.c_[xx.ravel(), yy.ravel()])
+    # Reshape the predicted values
+    Z = Z.reshape(xx.shape)
+    # Plot the decision boundary
+    ax.contourf(xx, yy, Z, alpha=0.4)
+    # Plot the data points
+    ax.scatter(X[:, 0], X[:, 1], c=y, alpha=0.8)
+    # Set the title
+    ax.set_title('Decision Boundaries')
+    # Set the x and y labels
+    ax.set_xlabel(f'Feature 1')
+    ax.set_ylabel(f'Feature 2')
+    # Show the plot
+    plt.show()

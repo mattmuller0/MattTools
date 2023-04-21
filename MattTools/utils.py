@@ -96,9 +96,71 @@ def hide_warnings(warning_type='all'):
         warnings.filterwarnings('ignore')
     else:
         import warnings
-        warnings.filterwarnings('ignore', category=warning_type)
+        # catch errors
+        try:
+            warnings.filterwarnings('ignore', category=warning_type)\
+        except:
+            print(f'Warning type {warning_type} not found. Showing all warnings.')
 
     # Show warnings
     if warning_type == 'none':
         import warnings
         warnings.filterwarnings('default')
+
+# Function to print the current memory usage
+def print_memory_usage():
+    '''
+    Summary: Function to print the current memory usage
+    '''
+    # Import the resource module
+    import resource
+
+    # Print the current memory usage
+    print(f'Current memory usage is {resource.getrusage(resource.RUSAGE_SELF).ru_maxrss / 1000} MB')
+
+# Function to time the execution of a function
+def stopwatch(func, *args, **kwargs):
+    '''
+    Summary: Function to time the execution of a function
+
+    func (function) : function to time
+    *args (tuple) : tuple of arguments to pass to the function
+    **kwargs (dict) : dictionary of keyword arguments to pass to the function
+    '''
+    # Import the time module
+    import time
+
+    # Get the start time
+    start = time.time()
+
+    # Run the function
+    func(*args, **kwargs)
+
+    # Get the end time
+    end = time.time()
+
+    # Print the time elapsed
+    print(f'Time elapsed: {end - start}')
+
+# Function to profile the execution of a function
+def profiler(func, *args, **kwargs):
+    '''
+    Summary: Function to profile the execution of a function
+
+    func (function) : function to profile
+    *args (tuple) : tuple of arguments to pass to the function
+    **kwargs (dict) : dictionary of keyword arguments to pass to the function
+    '''
+    # Import the cProfile module
+    import cProfile
+
+    # Run the profiler
+    cProfile.run(func(*args, **kwargs))
+
+    # Print the profiler stats
+    profile = cProfile.Profile()
+    result = profile.runcall(func, *args, **kwargs)
+    profile.print_stats()
+
+    # Return the result
+    return result
