@@ -99,6 +99,7 @@ def hide_warnings(warning_type='all'):
         # catch errors
         try:
             warnings.filterwarnings('ignore', category=warning_type)\
+        
         except:
             print(f'Warning type {warning_type} not found. Showing all warnings.')
 
