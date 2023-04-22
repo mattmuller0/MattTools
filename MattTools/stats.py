@@ -93,7 +93,7 @@ class Bootstrap:
         self.rng_seed = rng_seed
 
     def get_n_splits(self):
-        return self.n_boostraps
+        return self.n_bootstrap
 
     def split(self, X, y=None):
         '''
@@ -120,7 +120,7 @@ class Bootstrap:
             # get indices for each label
             indices = [np.where(y == label)[0] for label in labels]
             # randomly sample each set of indices
-            for i in range(self.n_boostraps):
+            for i in range(self.n_bootstrap):
                 # sample indices
                 sampled_indices = [rng.choice(ind, size=len(ind), replace=True) for ind in indices]
                 # concatenate sampled indices
