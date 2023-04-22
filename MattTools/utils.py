@@ -146,6 +146,7 @@ def stopwatch(func, *args, **kwargs):
 # Function to profile the execution of a function
 def profiler(func, *args, **kwargs):
     '''
+    ####### WIP #######
     Summary: Function to profile the execution of a function
 
     func (function) : function to profile

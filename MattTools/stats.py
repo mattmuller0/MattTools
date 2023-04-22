@@ -78,44 +78,60 @@ def bootstrap_auc_confidence(y_pred, y_true, ci =  0.95,
     print(f"Confidence interval for the score: {working_roc_auc:0.3f} [{confidence_lower:0.3f} - {confidence_upper:0.3f}]")
     return working_roc_auc, confidence_lower, confidence_upper
 
-# Create an object to bootstrap a dataset
+# Create an object to bootstrap data
 class Bootstrap:
-    def __init__(self, data, labels, n_bootstraps=1000, rng_seed=None):
+    def __init__(self, n_boostraps=5, stratified=True, rng_seed=None):
         '''
         Summary: Class to bootstrap a dataset
-
-        data (np.array) : numpy array of data to bootstrap (can be n-dimensional)
-        labels (np.array) : numpy array of labels to bootstrap (can be n-dimensional)
-        n_bootstraps (int) : integer value of the number of bootstraps
-        rng_seed (str) : random seed to set a random state, which
-
-        output (list) : working_roc_auc, confidence_lower, confidence_upper
+        n_splits (int) : integer value of the number of bootstraps
+        shuffle (bool) : whether to shuffle the indices before splitting
+        rng_seed (int) : random seed to set a random state
 
         Attributes:
         data (np.array) : numpy array of data to bootstrap (can be n-dimensional)
         labels (np.array) : numpy array of labels to bootstrap (can be n-dimensional)
-        n_bootstraps (int) : integer value of the number of bootstraps
-        rng_seed (str) : random seed to set a random state, which
-        bootstrapped_data (np.array) : numpy array of bootstrapped data
-        bootstrapped_labels (np.array) : numpy array of bootstrapped labels
+        n_splits (int) : integer value of the number of bootstraps
+        shuffle (bool) : whether to shuffle the indices before splitting
+        rng_seed (int) : random seed to set a random state
         '''
-        self.data = data
-        self.labels = labels
-        self.n_bootstraps = n_bootstraps
+        self.n_boostraps = n_boostraps
+        self.stratified = stratified
         self.rng_seed = rng_seed
-        self.bootstrapped_data = []
-        self.bootstrapped_labels = []
-        if rng_seed is not None:
-            self.rng = np.random.RandomState(rng_seed)
-        self.bootstrapped_data, self.bootstrapped_labels = self.split()
-        
+
     def get_n_splits(self):
-        return self.n_bootstraps
-    
-    def split(self):
-        for i in range(self.n_bootstraps):
-            # bootstrap by sampling with replacement on the prediction indices
-            indices = self.rng.randint(0, len(self.data), len(self.data))
-            self.bootstrapped_data.append(self.data[indices])
-            self.bootstrapped_labels.append(self.labels[indices])
-        return np.array(self.bootstrapped_data), np.array(self.bootstrapped_labels)
+        return self.n_boostraps
+
+    def split(self, X, y=None):
+        '''
+        Summary: Split the data and labels into bootstrapped datasets
+        X (np.array) : numpy array of data to bootstrap (can be n-dimensional)
+        y (np.array) : numpy array of labels to bootstrap (can be n-dimensional)
+
+        output (list) : bootstrapped_data, bootstrapped_labels
+        '''
+        if not self.stratified:
+            Warning("Stratified is False, this may result in unbalanced classes in the bootstrapped datasets")
+            rng = np.random.RandomState(self.rng_seed)
+            indices = np.arange(len(X))
+            for i in range(self.n_boostraps):
+                indices = rng.choice(indices, size=len(X), replace=True)
+                # Only use indices with all classes
+                while len(np.unique(y[indices])) < 2:
+                    indices = rng.choice(indices, size=len(X), replace=True)
+                yield indices, _ # returns an empty value in order to work as sklearn base folds
+        else:
+            rng = np.random.RandomState(self.rng_seed)
+            # split data by unique labels
+            labels = np.unique(y)
+            # get indices for each label
+            indices = [np.where(y == label)[0] for label in labels]
+            # randomly sample each set of indices
+            for i in range(self.n_boostraps):
+                # sample indices
+                sampled_indices = [rng.choice(ind, size=len(ind), replace=True) for ind in indices]
+                # concatenate sampled indices
+                sampled_indices = np.concatenate(sampled_indices)
+                # shuffle indices
+                rng.shuffle(sampled_indices)
+                # yield sampled indices
+                yield sampled_indices, _

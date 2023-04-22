@@ -48,7 +48,7 @@ def plot_reduction(
     X : pd.DataFrame, y : pd.Series, 
     dim_1 = 0, dim_2 = 1,
     save_path = None, 
-    figsize = (10, 10), kwargs = {}
+    figsize = (10, 10), *args = {}
     ):
     '''
     Summary: Function to plot the PCA model
@@ -58,7 +58,7 @@ def plot_reduction(
     y (pd.Series) : series of labels
     components (int) : number of components to plot on y-axis
     save_path (str) : string pointing where to save image
-    kwargs (dict) : dictionary of keyword arguments to pass to plt.figure
+    *args (tuple) : typle of arguments to pass to plt.scatter
     '''
     # Check if reduction is a valid sklearn model
     if not hasattr(reduction, 'fit_transform'):
@@ -73,20 +73,16 @@ def plot_reduction(
 
     # Plot the data
     plt.figure(figsize=figsize)
-    plt.scatter(X_reduced[:, 0], X_reduced[:, 1], c=y, **kwargs)
+    plt.scatter(X_reduced[:, 0], X_reduced[:, 1], c=y, *args)
     plt.title(f'{reduction.__class__.__name__} Plot')
-    plt.xlabel(f'{reduction.__class__.__name__} {dim_1}')
-    plt.ylabel(f'{reduction.__class__.__name__} {dim_2}')
+    plt.xlabel(f'{reduction.__class__.__name__} {dim_1} [{PCA.explained_variance_ratio_[dim_1]*100:0.4f}%]')
+    plt.ylabel(f'{reduction.__class__.__name__} {dim_2} [{PCA.explained_variance_ratio_[dim_2]*100:0.4f}%]')
     if save_path:
         plt.savefig(save_path)
     else:
         plt.show()
 
-def plot_scree(
-    pca : PCA(), components = 50,
-    save_path = None,
-    figsize = (10, 10),
-    kwargs = {}
+def plot_scree(pca : PCA(), components = 50, save_path = None, figsize = (10, 10), *args
     ):
     '''
     Summary: Function to plot the scree plot of a PCA model
@@ -95,12 +91,12 @@ def plot_scree(
     components (int) : number of components to plot on y-axis
     save_path (str) : string pointing where to save image
     figsize (tuple) : tuple of figure size
-    kwargs (dict) : dictionary of keyword arguments to pass to plt.figure
+    args (dict) :  arguments to pass to plt.plot
     '''
     plt.figure(figsize=figsize)
     plt.plot(np.arange(pca.n_components_)[:components], 
              pca.explained_variance_ratio_[:components],
-             'o-', **kwargs)
+             'o-', *args)
     plt.title('Scree Plot')
     plt.xlabel('Principal Component')
     plt.ylabel('Proportion of Variance Explained')
@@ -243,94 +239,9 @@ def plot_confusion_matrices(models, X, y, figsize=(10, 10)):
     plt.show()
 
 
-# Function to plot principal components decision boundaries
-def plot_pca_decision_boundaries(model, X, y, figsize=(10, 10), n_components=2):
-    '''
-    Summary: Function to plot principal components decision boundaries
+# Function to plot prediction probabilities of a dictionary of models
 
-    model (sklearn model) : sklearn model or pipeline WITH PCA
-    X (np.array) : numpy array of feature data
-    y (np.array) : numpy array of target data
-    figsize (tuple) : size of the plot
-    n_components (int) : number of principal components to use (only supports 2 for now)
 
-    output (None) : None
-    '''
-    # Create a figure
-    fig, ax = plt.subplots(figsize=figsize)
-    # Fit the model
-    model.fit(X, y)
-    # Get the principal components
-    pca = model.named_steps['pca']
-    # Get the principal components
-    X_pca = pca.transform(X)
-    # Get the explained variance
-    explained_variance = pca.explained_variance_ratio_
-    # Get the first two principal components
-    X_pca = X_pca[:, :n_components]
-    # Get the minimum and maximum values for the first principal component
-    x_min, x_max = X_pca[:, 0].min() - 1, X_pca[:, 0].max() + 1
-    # Get the minimum and maximum values for the second principal component
-    y_min, y_max = X_pca[:, 1].min() - 1, X_pca[:, 1].max() + 1
-    # Create a meshgrid
-    xx, yy = np.meshgrid(np.arange(x_min, x_max, 0.1),
-                         np.arange(y_min, y_max, 0.1))
-    # Get the predicted values
-    Z = model.predict(np.c_[xx.ravel(), yy.ravel()])
-    # Reshape the predicted values
-    Z = Z.reshape(xx.shape)
-    # Plot the decision boundary
-    ax.contourf(xx, yy, Z, alpha=0.4)
-    # Plot the data points
-    ax.scatter(X_pca[:, 0], X_pca[:, 1], c=y, alpha=0.8)
-    # Set the title
-    ax.set_title('PCA Decision Boundaries')
-    # Set the x and y labels
-    ax.set_xlabel(f'Principal Component 1 ({explained_variance[0]:0.2f})')
-    ax.set_ylabel(f'Principal Component 2 ({explained_variance[1]:0.2f})')
-    # Show the plot
-    plt.show()
-
-# Function to plot the decision boundaries of a model
-def plot_decision_boundaries(model, X, y, figsize=(10, 10), feature_one = 0, feature_two = 1):
-    '''
-    ######### WIP!!! #########
-    Summary: Function to plot the decision boundaries of a model
-
-    model (sklearn model) : sklearn model or pipeline
-    X (np.array) : numpy array of feature data
-    y (np.array) : numpy array of target data
-    figsize (tuple) : size of the plot
-    n_features (int) : number of features to use (only supports 2 for now)
-
-    output (None) : None
-    '''
-    # Create a figure
-    fig, ax = plt.subplots(figsize=figsize)
-    # Fit the model
-    model.fit(X, y)
-    # Get the minimum and maximum values for the first feature
-    x_min, x_max = X[:, feature_one].min() - 1, X[:, 0].max() + 1
-    # Get the minimum and maximum values for the second feature
-    y_min, y_max = X[:, feature_two].min() - 1, X[:, 1].max() + 1
-    # Create a meshgrid
-    xx, yy = np.meshgrid(np.arange(x_min, x_max, 0.1),
-                         np.arange(y_min, y_max, 0.1))
-    # Get the predicted values
-    Z = model.predict(np.c_[xx.ravel(), yy.ravel()])
-    # Reshape the predicted values
-    Z = Z.reshape(xx.shape)
-    # Plot the decision boundary
-    ax.contourf(xx, yy, Z, alpha=0.4)
-    # Plot the data points
-    ax.scatter(X[:, 0], X[:, 1], c=y, alpha=0.8)
-    # Set the title
-    ax.set_title('Decision Boundaries')
-    # Set the x and y labels
-    ax.set_xlabel(f'Feature 1')
-    ax.set_ylabel(f'Feature 2')
-    # Show the plot
-    plt.show()
 ######################################################################
 #
 #            Plotting Curves and Metrics of single models
@@ -376,7 +287,8 @@ def plot_confusion_matrix(
 # Function to plot ROC curve with mean and 95% confidence interval from cross-validation
 def plot_roc_curve_ci(model, X, y, cv=StratifiedKFold(n_splits=5),
                       title="Mean ROC curve with 95% Confidence Interval",
-                      save_path=None, **kwargs):
+                      save_path=None, *
+                      args):
     '''
     Plot ROC curve with mean and 95% confidence interval from cross-validation.
 
@@ -394,8 +306,8 @@ def plot_roc_curve_ci(model, X, y, cv=StratifiedKFold(n_splits=5),
         Title of plot.
     save_path : str, default=None
         String pointing where to save image.
-    **kwargs : dict
-        Additional keyword arguments to pass to plt.savefig()
+    *args : dict
+        Additional keyword arguments to pass to the plot function.
     '''
     # Convert X to numpy array
     if not isinstance(X, np.ndarray):
@@ -425,6 +337,7 @@ def plot_roc_curve_ci(model, X, y, cv=StratifiedKFold(n_splits=5),
     mean_tpr[-1] = 1.0
     mean_auc = auc(mean_fpr, mean_tpr)
     std_auc = np.std(aucs)
+    ci_auc = 1.96 * np.std(aucs, axis=0) / np.sqrt(cv.get_n_splits())
 
     ci_tpr = 1.96 * np.std(tprs, axis=0) / np.sqrt(cv.get_n_splits())
     tprs_upper = np.minimum(mean_tpr + ci_tpr, 1)
@@ -435,7 +348,7 @@ def plot_roc_curve_ci(model, X, y, cv=StratifiedKFold(n_splits=5),
     # Plot mean ROC curve
     ax.plot(mean_fpr, mean_tpr, color="b",
             label=f"ROC (AUC = {mean_auc:.2f} ± {std_auc:.2f})",
-            lw=2, alpha=0.8)
+            lw=2, alpha=0.8, *args)
     ax.set(xlabel="False Positive Rate", ylabel="True Positive Rate",title=title, aspect='equal')
     ax.legend(loc="lower right")
 
@@ -444,6 +357,48 @@ def plot_roc_curve_ci(model, X, y, cv=StratifiedKFold(n_splits=5),
     else:
         plt.show()
 
+# Function to plot the decision boundaries of a model
+def plot_decision_boundaries(model, X, y, figsize=(10, 10), feature_one = 0, feature_two = 1):
+    '''
+    ######### WIP!!! #########
+    Summary: Function to plot the decision boundaries of a model
+
+    model (sklearn model) : sklearn model or pipeline
+    X (np.array) : numpy array of feature data
+    y (np.array) : numpy array of target data
+    figsize (tuple) : size of the plot
+    n_features (int) : number of features to use (only supports 2 for now)
+
+    output (None) : None
+    '''
+    # Create a figure
+    fig, ax = plt.subplots(figsize=figsize)
+    # Fit the model
+    model.fit(X, y)
+    # Get the minimum and maximum values for the first feature
+    x_min, x_max = X[:, feature_one].min() - 1, X[:, 0].max() + 1
+    # Get the minimum and maximum values for the second feature
+    y_min, y_max = X[:, feature_two].min() - 1, X[:, 1].max() + 1
+    # Create a meshgrid
+    xx, yy = np.meshgrid(np.arange(x_min, x_max, 0.1),
+                         np.arange(y_min, y_max, 0.1))
+    # Get the predicted values
+    Z = model.predict(np.c_[xx.ravel(), yy.ravel()])
+    # Reshape the predicted values
+    Z = Z.reshape(xx.shape)
+    # Plot the decision boundary
+    ax.contourf(xx, yy, Z, alpha=0.4)
+    # Plot the data points
+    ax.scatter(X[:, 0], X[:, 1], c=y, alpha=0.8)
+    # Set the title
+    ax.set_title('Decision Boundaries')
+    # Set the x and y labels
+    ax.set_xlabel(f'Feature 1')
+    ax.set_ylabel(f'Feature 2')
+    # Show the plot
+    plt.show()
+
+
 #=================================================================================================
 #
 #                        Plotting Training Functions
@@ -451,7 +406,7 @@ def plot_roc_curve_ci(model, X, y, cv=StratifiedKFold(n_splits=5),
 # Function to plot ROC curve with mean and 95% confidence interval from cross-validation
 def plot_training_roc_curve_ci(model, X, y, cv=StratifiedKFold(n_splits=5),
                       title="Mean ROC curve with 95% Confidence Interval",
-                      save_path=None, **kwargs):
+                      save_path=None, *args):
     '''
     Plot ROC curve with mean and 95% confidence interval from cross-validation.
 
@@ -469,8 +424,8 @@ def plot_training_roc_curve_ci(model, X, y, cv=StratifiedKFold(n_splits=5),
         Title of plot.
     save_path : str, default=None
         String pointing where to save image.
-    **kwargs : dict
-        Additional keyword arguments to pass to plt.savefig()
+    *args : dict
+        Additional arguments to pass to the plot function
     '''
     # Convert X to numpy array
     if not isinstance(X, np.ndarray):
@@ -527,7 +482,9 @@ def plot_training_roc_curve_ci(model, X, y, cv=StratifiedKFold(n_splits=5),
         plt.show()
 
 # Function to plot the test probabilities of a model using cross validation
-def plot_training_probas(model, X, y, cv_splits=6, plot=sns.boxplot, save_path=None, title=None, kwargs={}):
+def plot_training_probas(model, X, y, 
+                         cv=StratifiedKFold(n_splits=5), 
+                         plot=sns.boxplot, save_path=None, title=None, *args):
     """
     Summary:
     --------
@@ -538,10 +495,10 @@ def plot_training_probas(model, X, y, cv_splits=6, plot=sns.boxplot, save_path=N
     model (sklearn model) : sklearn model to be used
     X (np.array or pd.DataFrame) : np array of features used
     y (np.array) : list of labels used for classes
-    cv_splits (int) : number of splits for cross validation
+    cv (resampler) : resampler to use for cross validation
     plot (sns plot) : seaborn plot to use
     save_path (str) : path to save plot to
-    kwargs (dict) : kwargs to pass to seaborn plot
+    *args (dict) : *args to pass to seaborn plot
     """
     # check if X is a numpy array
     if not isinstance(X, np.ndarray):
@@ -551,7 +508,6 @@ def plot_training_probas(model, X, y, cv_splits=6, plot=sns.boxplot, save_path=N
             raise TypeError("X must be a numpy array or convertible to one")
 
     # CV setup
-    cv = StratifiedKFold(n_splits=cv_splits)
     model = clone(model)
 
     # get scores
@@ -573,7 +529,7 @@ def plot_training_probas(model, X, y, cv_splits=6, plot=sns.boxplot, save_path=N
 
     # plot the data
     sns.set_theme(style="whitegrid", palette="colorblind")
-    ax = plot(df, x="labels", y="preds", order=np.unique(df["labels"]), **kwargs)
+    ax = plot(df, x="labels", y="preds", order=np.unique(df["labels"]), *args)
     ax.set(ylabel="Prediction Score", xlabel="Labels", title=title)
 
     # statistical annotation
