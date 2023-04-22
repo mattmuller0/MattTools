@@ -48,7 +48,7 @@ def plot_reduction(
     X : pd.DataFrame, y : pd.Series, 
     dim_1 = 0, dim_2 = 1,
     save_path = None, 
-    figsize = (10, 10), *args = {}
+    figsize = (10, 10), *args
     ):
     '''
     Summary: Function to plot the PCA model
@@ -287,8 +287,7 @@ def plot_confusion_matrix(
 # Function to plot ROC curve with mean and 95% confidence interval from cross-validation
 def plot_roc_curve_ci(model, X, y, cv=StratifiedKFold(n_splits=5),
                       title="Mean ROC curve with 95% Confidence Interval",
-                      save_path=None, *
-                      args):
+                      save_path=None, *args):
     '''
     Plot ROC curve with mean and 95% confidence interval from cross-validation.
 
@@ -321,7 +320,7 @@ def plot_roc_curve_ci(model, X, y, cv=StratifiedKFold(n_splits=5),
     aucs = []
     mean_fpr = np.linspace(0, 1, 100)
     fig, ax = plt.subplots(figsize=(6, 6))
-    for fold, (train, test) in enumerate(cv.split(X, y)):
+    for fold, (train, _) in enumerate(cv.split(X, y)):
         viz = RocCurveDisplay.from_estimator(model, X[train], y[train],
                                               name=f"ROC fold {fold}",
                                               alpha=0.3, lw=1, ax=ax)
