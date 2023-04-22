@@ -81,21 +81,14 @@ def bootstrap_auc_confidence(y_pred, y_true, ci =  0.95,
 
 # Create an object to bootstrap data
 class Bootstrap:
-    def __init__(self, n_boostraps=5, stratified=True, rng_seed=None):
+    def __init__(self, n_bootstrap=100, stratified=True, rng_seed=None):
         '''
         Summary: Class to bootstrap a dataset
-        n_splits (int) : integer value of the number of bootstraps
-        shuffle (bool) : whether to shuffle the indices before splitting
-        rng_seed (int) : random seed to set a random state
-
-        Attributes:
-        data (np.array) : numpy array of data to bootstrap (can be n-dimensional)
-        labels (np.array) : numpy array of labels to bootstrap (can be n-dimensional)
-        n_splits (int) : integer value of the number of bootstraps
+        n_bootstrap (int) : number of bootstraps to perform
         shuffle (bool) : whether to shuffle the indices before splitting
         rng_seed (int) : random seed to set a random state
         '''
-        self.n_boostraps = n_boostraps
+        self.n_bootstrap = n_bootstrap
         self.stratified = stratified
         self.rng_seed = rng_seed
 
@@ -135,4 +128,4 @@ class Bootstrap:
                 # shuffle indices
                 rng.shuffle(sampled_indices)
                 # yield sampled indices
-                yield sampled_indices, _
+                yield sampled_indices, sampled_indices # returns an empty value in order to work as sklearn base folds

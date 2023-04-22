@@ -20,6 +20,7 @@ from sklearn.metrics import roc_auc_score, roc_curve, auc, precision_recall_curv
 from sklearn.model_selection import StratifiedKFold, KFold
 from sklearn.model_selection import cross_val_score, cross_validate
 
+from sklearn.utils import resample
 from sklearn.base import clone
 import scipy.stats as st
 import statsmodels.stats.api as sms
@@ -90,7 +91,7 @@ def cross_val_models(models, X, y, cv_folds=5, scoring='roc_auc', random_state=1
 
 
 # Function to test various models and return the metrics as a dataframe
-def test_models(models, X, y, random_state=100):
+def test_models(models, X, y, bootstraps=100):
     '''
     Summary: Function to test various models and return the accuracy of classifiers or 
     R-squared of regressors as a dataframe
@@ -103,23 +104,16 @@ def test_models(models, X, y, random_state=100):
     output (pd.DataFrame) : dataframe of model metrics
     '''
     # Create empty dataframe to store results
-    results = pd.DataFrame(columns=['model', 'score'])
+    results = pd.DataFrame(columns=['model', 'mean', 'std', 'min', 'max'])
     # Iterate through models
     for model_name, model in models.items():
         scores = []
-        # Set the random state
-        model.random_state = random_state
-        # Fit the model
-        model.fit(X, y)
-        # Get the score
-        score = model.score(X, y)
-        # Append the score to the list
-        scores.append(score)
-    # Concat the results to the dataframe
-    results = pd.concat([results, pd.DataFrame({'model': model_name,
-                                                'mean': scores.mean(),
-                                                'std': scores.std(),
-                                                'min': scores.min(),
-                                                'max': scores.max()}, index=[0])])
-    # Return the results
+        for i in range(bootstraps):
+            X_resample, y_resample = resample(X, y, stratify=y)
+            scores.append(model.score(X_resample, y_resample))
+        results = pd.concat([results, pd.DataFrame({'model': model_name,
+                                                    'mean': np.mean(scores),
+                                                    'std': np.std(scores),
+                                                    'min': np.min(scores),
+                                                    'max': np.max(scores)}, index=[0])])
     return results
