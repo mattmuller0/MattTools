@@ -107,7 +107,7 @@ class Bootstrap:
             Warning("Stratified is False, this may result in unbalanced classes in the bootstrapped datasets")
             rng = np.random.RandomState(self.rng_seed)
             indices = np.arange(len(X))
-            for i in range(self.n_boostraps):
+            for i in range(self.n_bootstrap):
                 indices = rng.choice(indices, size=len(X), replace=True)
                 # Only use indices with all classes
                 while len(np.unique(y[indices])) < 2:
