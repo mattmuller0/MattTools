@@ -111,7 +111,7 @@ def plot_scree(pca : PCA(), components = 50, save_path = None, figsize = (10, 10
 #
 ######################################################################
 # Function to plot the results of the test_models function with a barplot mean and error bars
-def plot_model_results(results, figsize=(12, 8)):
+def plot_model_results(results, output_path=None, figsize=(12, 8)):
     '''
     Summary: Function to plot the results of the test_models function with a barplot mean and error bars
 
@@ -130,10 +130,13 @@ def plot_model_results(results, figsize=(12, 8)):
     ax.set_xlabel('Model')
     ax.set_ylabel('Mean Score')
     # Show the plot
-    plt.show()
+    if output_path:
+        plt.savefig(output_path)
+    else:
+        plt.show()
 
 # Function to plot the ROC curves of each model
-def plot_roc_curves(models, X, y, figsize=(10, 10)):
+def plot_roc_curves(models, X, y, output_path=None, figsize=(10, 10)):
     '''
     Summary: Function to plot the ROC curves of each model
 
@@ -164,10 +167,13 @@ def plot_roc_curves(models, X, y, figsize=(10, 10)):
     # Set the legend
     ax.legend()
     # Show the plot
-    plt.show()
+    if output_path:
+        plt.savefig(output_path)
+    else:
+        plt.show()
 
 # Function to plot the ROC curves of each model
-def plot_prc_curves(models, X, y, figsize=(10, 10)):
+def plot_prc_curves(models, X, y, output_path=None, figsize=(10, 10)):
     '''
     Summary: Function to plot the PRC curves of each model
 
@@ -198,11 +204,14 @@ def plot_prc_curves(models, X, y, figsize=(10, 10)):
     # Set the legend
     ax.legend()
     # Show the plot
-    plt.show()
+    if output_path:
+        plt.savefig(output_path)
+    else:
+        plt.show()
 
 
 # Function to plot the confusion matrix of a dictionary of models in a grid square
-def plot_confusion_matrices(models, X, y, figsize=(10, 10)):
+def plot_confusion_matrices(models, X, y, output_path=None, figsize=(10, 10)):
     '''
     Summary: Function to plot the confusion matrix of a dictionary of models in a grid
 
@@ -236,7 +245,10 @@ def plot_confusion_matrices(models, X, y, figsize=(10, 10)):
     # Adjust spacing between subplots
     plt.subplots_adjust(hspace=0.4, wspace=0.4)
     # Show the plot
-    plt.show()
+    if output_path:
+        plt.savefig(output_path)
+    else:
+        plt.show()
 
 
 # Function to plot prediction probabilities of a dictionary of models
