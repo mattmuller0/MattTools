@@ -129,3 +129,73 @@ class Bootstrap:
                 rng.shuffle(sampled_indices)
                 # yield sampled indices
                 yield sampled_indices, sampled_indices # returns an empty value in order to work as sklearn base folds
+
+# Calculate the odds ratio of target columns in a dataframe against a list of columns
+def odds_ratio(df, targets, columns, plot=False):
+    '''
+    Summary: Calculate the odds ratio of a column in a dataframe against a list of columns
+    df (pd.DataFrame) : pandas dataframe
+    targets (str) : list of column names to calculate the odds ratios for
+    columns (list) : list of column names to calculate the odds ratio against
+    ci (float) : confidence interval to calculate
+    plot (bool) : whether to plot the odds ratio
+
+    output (pd.DataFrame) : dataframe of odds ratio values
+    '''
+    # create empty dataframe
+    odds_ratio_df = pd.DataFrame(columns=columns, index=targets)
+    # loop through targets
+    for target in targets:
+        # loop through columns
+        for column in columns:
+
+            # drop values of 2 from df[target]
+            idx = df[column] != 2
+            df = df[idx]
+
+            if len(np.unique(df[column])) != 2 or len(np.unique(df[target])) != 2:
+                continue
+            # get the odds ratio
+            res = st.contingency.odds_ratio(pd.crosstab(df[target], df[column]))
+            odds_ratio_df.loc[target, column] = res.statistic
+            # get the pvalue
+            odds_ratio_df.loc[target, column + '_pvalue'] = st.fisher_exact(pd.crosstab(df[target], df[column]))[1]
+            # get the confidence interval
+            odds_ratio_df.loc[target, column + '_ci_lower'] = res.confidence_interval(0.95)[0]
+            odds_ratio_df.loc[target, column + '_ci_upper'] = res.confidence_interval(0.95)[1]
+
+    # plot the odds ratio
+    if plot:
+        if len(columns) > 1:
+            # get just the odds ratio
+            odds_ratio_df_ = odds_ratio_df.drop(columns=[col for col in odds_ratio_df.columns if 'pvalue' in col or 'ci' in col])
+
+            # set NaN or inf values to 0
+            odds_ratio_df_ = odds_ratio_df_.replace([-np.inf], 0)
+            odds_ratio_df_ = odds_ratio_df_.replace([np.inf], 10)
+
+            # get aspect ratio
+            aspect = odds_ratio_df_.shape[1] / odds_ratio_df_.shape[0]
+
+            # Make a heatmap with gridlines
+            plt.figure(figsize=(aspect * 5, 5))
+            sns.heatmap(odds_ratio_df_, linewidths=0.5, linecolor='black', cmap='Blues')
+            plt.show()
+        else:
+            # get just the odds ratio
+            odds_ratio_df_ = odds_ratio_df.drop(columns=[col for col in odds_ratio_df.columns if 'pvalue' in col or 'ci' in col])
+            odds_ratio_df_ci_ = odds_ratio_df.drop(columns=[col for col in odds_ratio_df.columns if 'ci' not in col])
+            # set NaN or inf values to 0
+            odds_ratio_df_ = odds_ratio_df_.replace([-np.inf], 0)
+            odds_ratio_df_ = odds_ratio_df_.replace([np.inf], 10)
+
+            # Make an error bar plot
+            plt.figure()
+            err = [odds_ratio_df_ci_.iloc[:, 0], odds_ratio_df_ci_.iloc[:, 1]]
+            plt.errorbar(y=odds_ratio_df_.index, x=odds_ratio_df_.iloc[:, 0], xerr=err, fmt='o', capsize=5, color='black')
+            plt.xticks(rotation=90)
+            plt.title(f'Odds Ratio of {columns[0]}')
+            plt.ylabel('Odds Ratio')
+            plt.xlabel('Comparison Groups')
+            plt.show()
+    return odds_ratio_df

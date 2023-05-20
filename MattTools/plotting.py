@@ -473,6 +473,7 @@ def plot_training_roc_curve_ci(model, X, y, cv=StratifiedKFold(n_splits=5),
     mean_tpr[-1] = 1.0
     mean_auc = auc(mean_fpr, mean_tpr)
     std_auc = np.std(aucs)
+    ci_auc = 1.96 * np.std(aucs) / np.sqrt(cv.get_n_splits())
 
     ci_tpr = 1.96 * np.std(tprs, axis=0) / np.sqrt(cv.get_n_splits())
     tprs_upper = np.minimum(mean_tpr + ci_tpr, 1)
@@ -482,7 +483,7 @@ def plot_training_roc_curve_ci(model, X, y, cv=StratifiedKFold(n_splits=5),
     
     # Plot mean ROC curve
     ax.plot(mean_fpr, mean_tpr, color="b",
-            label=f"ROC (AUC = {mean_auc:.2f} ± {std_auc:.2f})",
+            label=f"ROC (AUC = {mean_auc:.2f} ± {ci_auc:.2f})",
             lw=2, alpha=0.8)
     ax.set(xlabel="False Positive Rate", ylabel="True Positive Rate",title=title, aspect='equal')
     ax.legend(loc="lower right")
