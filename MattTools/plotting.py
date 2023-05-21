@@ -331,7 +331,7 @@ def plot_roc_curve_ci(model, X, y, bootstraps=100,
     tprs = []
     aucs = []
     fprs = []
-    mean_fpr = np.linspace(0, 1, 10)
+    mean_fpr = np.linspace(0, 1, 100)
     fig, ax = plt.subplots(figsize=(6, 6))
     for i in range(bootstraps):
         _X, _y = resample(X, y, stratify=y)
@@ -344,11 +344,13 @@ def plot_roc_curve_ci(model, X, y, bootstraps=100,
         # calculate roc curves
         fpr, tpr, _ = roc_curve(_y, yhat)
 
-        # calculate AUC
+        # calculate AUC and interp TPR
         roc_auc = auc(fpr, tpr)
         interp_tpr = np.interp(mean_fpr, fpr, tpr)
         interp_tpr[0] = 0.0
-        tprs.append(tpr)
+
+        # append to lists
+        tprs.append(interp_tpr)
         aucs.append(roc_auc)
         fprs.append(fpr)
 
@@ -356,10 +358,6 @@ def plot_roc_curve_ci(model, X, y, bootstraps=100,
     ax.plot([0, 1], [0, 1], "k--", label="chance level (AUC = 0.5)")
 
     # Plot mean ROC curve with 95% confidence interval
-    # mean_tpr = np.mean(tprs, axis=0)
-    # make tprs and fprs numpy arrays
-    fprs = np.array(fprs)
-    tprs = np.array(tprs)
     mean_tpr = np.mean(tprs, axis=0)
     mean_tpr[-1] = 1.0
 
@@ -564,9 +562,9 @@ def plot_training_roc_curve_ci(model, X, y, cv=StratifiedKFold(n_splits=5),
 
         # Get the ROC curve
         tpr, fpr, _ = roc_curve(y[train], preds)
-        print(y[train])
-        print(preds)
         roc_auc = auc(fpr, tpr)
+
+        print(roc_auc)
 
         interp_tpr = np.interp(mean_fpr, fpr, tpr)
         interp_tpr[0] = 0.0
