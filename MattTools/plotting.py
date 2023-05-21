@@ -363,12 +363,14 @@ def plot_roc_curve_ci(model, X, y, bootstraps=100,
     mean_tpr, ci_tpr = stats.mean_confidence_interval(tprs, confidence=0.95, axis=0)
     mean_tpr[-1] = 1.0
 
-    print(ci_auc)
-    print(ci_tpr)
+
 
     # get the confidence intervals out of the array
-    ci_auc = ci_auc[:, 0]
-    ci_tpr = ci_tpr[:, 0]
+    ci_auc = ci_auc[:, 1] - mean_auc
+    ci_tpr = ci_tpr[:, 1] - mean_tpr
+
+    print(ci_auc)
+    print(ci_tpr)
 
     # Plot confidence interval
     tprs_upper = np.minimum(mean_tpr + ci_tpr, 1)
