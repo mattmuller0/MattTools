@@ -380,7 +380,7 @@ def plot_roc_curve_ci(model, X, y, bootstraps=100,
     
     # Plot mean ROC curve
     ax.plot(mean_fpr, mean_tpr, color="b",
-            label=f"ROC (AUC = {mean_auc:.2f} ± {ci_auc:.2f})",
+            label=f"ROC (AUC = {mean_auc.item():.2f} ± {ci_auc.item():.2f})",
             lw=2, alpha=0.8, *args)
     ax.set(xlabel="False Positive Rate", ylabel="True Positive Rate",title=title, aspect='equal')
     ax.legend(loc="lower right")
