@@ -359,8 +359,8 @@ def plot_roc_curve_ci(model, X, y, bootstraps=100,
     # mean_auc = auc(mean_fpr, mean_tpr)
 
     # Calculate confidence intervals
-    mean_auc, ci_auc = stats.mean_confidence_interval(aucs, confidence=0.95)[1]
-    mean_tpr, ci_tpr = stats.mean_confidence_interval(tprs, confidence=0.95, axis=0)[1]
+    mean_auc, ci_auc = stats.mean_confidence_interval(aucs, confidence=0.95)
+    mean_tpr, ci_tpr = stats.mean_confidence_interval(tprs, confidence=0.95, axis=0)
     mean_tpr[-1] = 1.0
 
     print(ci_auc)
