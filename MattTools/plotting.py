@@ -330,7 +330,7 @@ def plot_roc_curve_ci(model, X, y, bootstraps=100,
     # Calculate ROC curve for each fold
     tprs = []
     aucs = []
-    mean_fpr = np.linspace(0, 1, 100)
+    mean_fpr = np.linspace(0, 1, 10)
     fig, ax = plt.subplots(figsize=(6, 6))
     for i in range(bootstraps):
         _X, _y = resample(X, y, stratify=y)
@@ -356,21 +356,15 @@ def plot_roc_curve_ci(model, X, y, bootstraps=100,
     # Plot mean ROC curve with 95% confidence interval
     mean_tpr = np.mean(tprs, axis=0)
     mean_tpr[-1] = 1.0
-    # mean_auc = auc(mean_fpr, mean_tpr)
 
     # Calculate confidence intervals
     mean_auc, ci_auc = stats.mean_confidence_interval(aucs, confidence=0.95)
     mean_tpr, ci_tpr = stats.mean_confidence_interval(tprs, confidence=0.95, axis=0)
     mean_tpr[-1] = 1.0
 
-
-
     # get the confidence intervals out of the array
     ci_auc = ci_auc[:, 1] - mean_auc
     ci_tpr = ci_tpr[:, 1] - mean_tpr
-
-    print(ci_auc)
-    print(ci_tpr)
 
     # Plot confidence interval
     tprs_upper = np.minimum(mean_tpr + ci_tpr, 1)
@@ -553,7 +547,7 @@ def plot_training_roc_curve_ci(model, X, y, cv=StratifiedKFold(n_splits=5),
     # Calculate ROC curve for each fold
     tprs = []
     aucs = []
-    mean_fpr = np.linspace(0, 1, 100)
+    mean_fpr = np.linspace(0, 1, 1000)
     fig, ax = plt.subplots(figsize=(6, 6))
     for fold, (train, test) in enumerate(cv.split(X, y)):
         # Fit model
@@ -572,12 +566,15 @@ def plot_training_roc_curve_ci(model, X, y, cv=StratifiedKFold(n_splits=5),
     # Plot mean ROC curve with 95% confidence interval
     mean_tpr = np.mean(tprs, axis=0)
     mean_tpr[-1] = 1.0
-    mean_auc = auc(mean_fpr, mean_tpr)
 
     # Calculate confidence intervals
     mean_auc, ci_auc = stats.mean_confidence_interval(aucs, confidence=0.95)
     mean_tpr, ci_tpr = stats.mean_confidence_interval(tprs, confidence=0.95, axis=0)
     mean_tpr[-1] = 1.0
+
+    # get the confidence intervals out of the array
+    ci_auc = ci_auc[:, 1] - mean_auc
+    ci_tpr = ci_tpr[:, 1] - mean_tpr
 
     # Plot confidence intervals
     tprs_upper = np.minimum(mean_tpr + ci_tpr, 1)
@@ -587,7 +584,7 @@ def plot_training_roc_curve_ci(model, X, y, cv=StratifiedKFold(n_splits=5),
     
     # Plot mean ROC curve
     ax.plot(mean_fpr, mean_tpr, color="b",
-            label=f"ROC (AUC = {mean_auc:.2f} ± {ci_auc:.2f})",
+            label=f"ROC (AUC = {mean_auc.item():.2f} ± {ci_auc.item():.2f})",
             lw=2, alpha=0.8)
     ax.set(xlabel="False Positive Rate", ylabel="True Positive Rate",title=title, aspect='equal')
     ax.legend(loc="lower right")
