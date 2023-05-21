@@ -562,6 +562,11 @@ def plot_training_roc_curve_ci(model, X, y, cv=StratifiedKFold(n_splits=5),
         preds = model.predict_proba(X[test])
         preds = preds[:, 1]
 
+        # debug code
+        # get the predictions argmax
+        print(f"preds: {np.argmax(preds, axis=1)}")
+        print(f"y[test]: {y[test]}")
+
         # Get the ROC curve
         tpr, fpr, _ = roc_curve(y[test], preds)
         roc_auc = auc(fpr, tpr)
