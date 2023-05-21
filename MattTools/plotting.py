@@ -558,10 +558,11 @@ def plot_training_roc_curve_ci(model, X, y, cv=StratifiedKFold(n_splits=5),
         model.fit(X[train], y[train])
 
         # Get roc curve
-        preds = model.predict_proba(X[train])[:, 0]
+        preds = model.predict_proba(X[test])
+        preds = preds[:, 1]
 
         # Get the ROC curve
-        tpr, fpr, _ = roc_curve(y[train], preds)
+        tpr, fpr, _ = roc_curve(y[test], preds)
         roc_auc = auc(fpr, tpr)
 
         # debug code
