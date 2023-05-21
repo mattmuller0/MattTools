@@ -556,7 +556,6 @@ def plot_training_roc_curve_ci(model, X, y, cv=StratifiedKFold(n_splits=5),
     for fold, (train, test) in enumerate(cv.split(X, y)):
         # Fit model
         model.fit(X[train], y[train])
-        print(model.classes_)
 
         # Get roc curve
         preds = model.predict_proba(X[test])
@@ -564,16 +563,23 @@ def plot_training_roc_curve_ci(model, X, y, cv=StratifiedKFold(n_splits=5),
 
         # Get the accuracy
         acc = model.score(X[test], y[test])
-        print(acc)
 
         # Get the ROC curve
         fpr, tpr, _ = roc_curve(y[test], preds)
         roc_auc = auc(fpr, tpr)
 
+        # Interpolate the ROC curve
         interp_tpr = np.interp(mean_fpr, fpr, tpr)
         interp_tpr[0] = 0.0
+        
+        # replace any values over 1 with 1
+        interp_tpr[interp_tpr > 1] = 1
+
+        # append to lists
         tprs.append(interp_tpr)
         aucs.append(roc_auc)
+    
+    # Plot chance level
     ax.plot([0, 1], [0, 1], "k--", label="chance level (AUC = 0.5)")
 
     # Plot mean ROC curve with 95% confidence interval
