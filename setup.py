@@ -2,7 +2,7 @@ from setuptools import setup, find_packages
 
 setup(
     name='MattTools',
-    version='0.4.2',
+    version='0.4.3',
     packages=find_packages(exclude=['tests*']),
     install_requires=[ 
             'numpy',

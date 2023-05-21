@@ -453,6 +453,9 @@ def plot_cross_validation_auroc(model, X, y, cv=StratifiedKFold(n_splits=5),
     *args : dict
         Additional arguments to pass to the plot function
     '''
+    # add warning that function will go defunct
+    print("This function will be defunct in the future. Please use plot_cross_validation_auroc instead.")
+
     # Convert X to numpy array
     if not isinstance(X, np.ndarray):
         try:
@@ -472,24 +475,45 @@ def plot_cross_validation_auroc(model, X, y, cv=StratifiedKFold(n_splits=5),
         # Fit model
         model.fit(X[train], y[train])
 
-        # Plot ROC curve
-        viz = RocCurveDisplay.from_estimator(model, X[test], y[test],
-                                              name=f"ROC fold {fold}",
-                                              alpha=0.3, lw=1, ax=ax)
-        plt.cla() # This removes each individual interation
-        interp_tpr = np.interp(mean_fpr, viz.fpr, viz.tpr)
+        # Get roc curve
+        preds = model.predict_proba(X[test])
+        preds = preds[:, 1]
+
+        # Get the accuracy
+        acc = model.score(X[test], y[test])
+
+        # Get the ROC curve
+        fpr, tpr, _ = roc_curve(y[test], preds)
+        roc_auc = auc(fpr, tpr)
+
+        # Interpolate the ROC curve
+        interp_tpr = np.interp(mean_fpr, fpr, tpr)
         interp_tpr[0] = 0.0
+        
+        # replace any values over 1 with 1
+        interp_tpr[interp_tpr > 1] = 1
+
+        # append to lists
         tprs.append(interp_tpr)
-        aucs.append(viz.roc_auc)
+        aucs.append(roc_auc)
+    
+    # Plot chance level
     ax.plot([0, 1], [0, 1], "k--", label="chance level (AUC = 0.5)")
 
     # Plot mean ROC curve with 95% confidence interval
     mean_tpr = np.mean(tprs, axis=0)
     mean_tpr[-1] = 1.0
-    mean_auc = auc(mean_fpr, mean_tpr)
-    ci_auc = 1.96 * np.std(aucs) / np.sqrt(cv.get_n_splits())
 
-    ci_tpr = 1.96 * np.std(tprs, axis=0) / np.sqrt(cv.get_n_splits())
+    # Calculate confidence intervals
+    mean_auc, ci_auc = stats.mean_confidence_interval(aucs, confidence=0.95)
+    mean_tpr, ci_tpr = stats.mean_confidence_interval(tprs, confidence=0.95, axis=0)
+    mean_tpr[-1] = 1.0
+
+    # get the confidence intervals out of the array
+    ci_auc = ci_auc[:, 1] - mean_auc
+    ci_tpr = ci_tpr[:, 1] - mean_tpr
+
+    # Plot confidence intervals
     tprs_upper = np.minimum(mean_tpr + ci_tpr, 1)
     tprs_lower = np.maximum(mean_tpr - ci_tpr, 0)
     ax.fill_between(mean_fpr, tprs_lower, tprs_upper, color="grey",
@@ -497,7 +521,7 @@ def plot_cross_validation_auroc(model, X, y, cv=StratifiedKFold(n_splits=5),
     
     # Plot mean ROC curve
     ax.plot(mean_fpr, mean_tpr, color="b",
-            label=f"ROC (AUC = {mean_auc:.2f} ± {ci_auc:.2f})",
+            label=f"ROC (AUC = {mean_auc.item():.2f} ± {ci_auc.item():.2f})",
             lw=2, alpha=0.8)
     ax.set(xlabel="False Positive Rate", ylabel="True Positive Rate",title=title, aspect='equal')
     ax.legend(loc="lower right")
