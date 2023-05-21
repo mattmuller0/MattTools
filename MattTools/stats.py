@@ -27,13 +27,28 @@ sys.path.append('.')
 # Code Below
 
 # Function to calculate the confidence interval of a dataset
-def mean_confidence_interval(data, confidence=0.95):
+def mean_confidence_interval(data, confidence=0.95, axis=None):
+    """
+    Compute the mean, the confidence interval of the mean, and the tolerance
+    interval. Note that the confidence interval is often misinterpreted [3].
+    References:
+    [1] https://en.wikipedia.org/wiki/Confidence_interval
+    [2| https://en.wikipedia.org/wiki/Tolerance_interval
+    [3] https://en.wikipedia.org/wiki/Confidence_interval#Meaning_and_interpretation
+    """
+    confidence = confidence / 100.0 if confidence > 1.0 else confidence
+    assert(0 < confidence < 1)
     a = 1.0 * np.array(data)
     n = len(a)
-    m, se = np.mean(a), st.sem(a)
-    h = se * st.t.ppf((1 + confidence) / 2., n-1)
-    low, high = st.t.interval(confidence, len(data)-1, loc=np.mean(data), scale=st.sem(data))
-    return m, low, high
+    # Both s=std() and se=sem() use unbiased estimators (ddof=1).
+    m = np.mean(a, axis=axis)
+    s = np.std(a, ddof=1, axis=axis)
+    se = st.sem(a, axis=axis)
+    t = st.t.ppf((1 + confidence) / 2., n - 1)
+    ci = np.c_[m - se * t, m + se * t]
+    assert(ci.shape[1] == 2 and ci.shape[0] ==
+           np.size(m, axis=None if axis is None else 0))
+    return m, ci
 
 # Function to bootstrap the auc score
 def bootstrap_auc_confidence(y_pred, y_true, ci =  0.95,

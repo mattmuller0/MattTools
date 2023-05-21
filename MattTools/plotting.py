@@ -23,6 +23,7 @@ from sklearn.base import clone
 import scipy.stats as st
 import statsmodels.stats.api as sms
 from scipy.stats import kruskal, zscore
+from sklearn.utils import resample
 
 from MattTools import stats
 
@@ -154,7 +155,7 @@ def plot_roc_curves(models, X, y, output_path=None, figsize=(10, 10)):
         # Get the predicted probabilities
         y_pred = model.predict_proba(X)[:, 1]
         # Get the ROC curve
-        fpr, tpr, thresholds = roc_curve(y, y_pred)
+        fpr, tpr, _ = roc_curve(y, y_pred)
         # Get the AUC
         roc_auc = auc(fpr, tpr)
         # Plot the ROC curve
@@ -296,13 +297,12 @@ def plot_confusion_matrix(
         plt.show()
 
 
-# Function to plot ROC curve with mean and 95% confidence interval from cross-validation
-def plot_roc_curve_ci(model, X, y, cv=StratifiedKFold(n_splits=5),
+# Function to plot ROC curve with mean and 95% confidence interval from bootstrapping
+def plot_roc_curve_ci(model, X, y, bootstraps=100,
                       title="Mean ROC curve with 95% Confidence Interval",
                       save_path=None, *args):
     '''
-    Plot ROC curve with mean and 95% confidence interval from cross-validation.
-
+    Plot ROC curve with mean and 95% confidence interval from bootstrapping.
     Parameters:
     -----------
     model : sklearn model
@@ -332,25 +332,38 @@ def plot_roc_curve_ci(model, X, y, cv=StratifiedKFold(n_splits=5),
     aucs = []
     mean_fpr = np.linspace(0, 1, 100)
     fig, ax = plt.subplots(figsize=(6, 6))
-    for fold, (train, _) in enumerate(cv.split(X, y)):
-        viz = RocCurveDisplay.from_estimator(model, X[train], y[train],
-                                              name=f"ROC fold {fold}",
-                                              alpha=0.3, lw=1, ax=ax)
-        plt.cla() # This removes each individual interation
-        interp_tpr = np.interp(mean_fpr, viz.fpr, viz.tpr)
+    for i in range(bootstraps):
+        X, y = resample(X, y, stratify=y)
+        # predict probabilities
+        yhat = model.predict_proba(X)
+
+        # keep probabilities for the positive outcome only
+        yhat = yhat[:, 1]
+
+        # calculate roc curves
+        fpr, tpr, _ = roc_curve(y, yhat)
+
+        # calculate AUC
+        roc_auc = auc(fpr, tpr)
+        interp_tpr = np.interp(mean_fpr, fpr, tpr)
         interp_tpr[0] = 0.0
         tprs.append(interp_tpr)
-        aucs.append(viz.roc_auc)
+        aucs.append(roc_auc)
+    
+    # Plot chance level
     ax.plot([0, 1], [0, 1], "k--", label="chance level (AUC = 0.5)")
 
     # Plot mean ROC curve with 95% confidence interval
     mean_tpr = np.mean(tprs, axis=0)
     mean_tpr[-1] = 1.0
-    mean_auc = auc(mean_fpr, mean_tpr)
-    std_auc = np.std(aucs)
-    ci_auc = 1.96 * np.std(aucs, axis=0) / np.sqrt(cv.get_n_splits())
+    # mean_auc = auc(mean_fpr, mean_tpr)
 
-    ci_tpr = 1.96 * np.std(tprs, axis=0) / np.sqrt(cv.get_n_splits())
+    # Calculate confidence intervals
+    mean_auc, ci_auc = stats.mean_confidence_interval(aucs, confidence=0.95)[1]
+    mean_tpr, ci_tpr = stats.mean_confidence_interval(tprs, confidence=0.95, axis=0)[1]
+    mean_tpr[-1] = 1.0
+
+    # Plot confidence interval
     tprs_upper = np.minimum(mean_tpr + ci_tpr, 1)
     tprs_lower = np.maximum(mean_tpr - ci_tpr, 0)
     ax.fill_between(mean_fpr, tprs_lower, tprs_upper, color="grey",
@@ -358,7 +371,7 @@ def plot_roc_curve_ci(model, X, y, cv=StratifiedKFold(n_splits=5),
     
     # Plot mean ROC curve
     ax.plot(mean_fpr, mean_tpr, color="b",
-            label=f"ROC (AUC = {mean_auc:.2f} ± {std_auc:.2f})",
+            label=f"ROC (AUC = {mean_auc:.2f} ± {ci_auc:.2f})",
             lw=2, alpha=0.8, *args)
     ax.set(xlabel="False Positive Rate", ylabel="True Positive Rate",title=title, aspect='equal')
     ax.legend(loc="lower right")
@@ -472,7 +485,6 @@ def plot_training_roc_curve_ci(model, X, y, cv=StratifiedKFold(n_splits=5),
     mean_tpr = np.mean(tprs, axis=0)
     mean_tpr[-1] = 1.0
     mean_auc = auc(mean_fpr, mean_tpr)
-    std_auc = np.std(aucs)
     ci_auc = 1.96 * np.std(aucs) / np.sqrt(cv.get_n_splits())
 
     ci_tpr = 1.96 * np.std(tprs, axis=0) / np.sqrt(cv.get_n_splits())

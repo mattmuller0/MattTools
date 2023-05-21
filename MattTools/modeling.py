@@ -54,7 +54,7 @@ def train_models(models, X, y, random_state=100):
     return models
 
 # Function to cross validate various models and return the metrics as a dataframe
-def cross_val_models(models, X, y, cv_folds=5, scoring='roc_auc', random_state=100, from_pretrained=False):
+def cross_val_models(models, X, y, cv_folds=5, scoring='roc_auc', random_state=100):
     '''
     Summary: Function to test various models and return the metrics as a dataframe
 
@@ -69,17 +69,16 @@ def cross_val_models(models, X, y, cv_folds=5, scoring='roc_auc', random_state=1
     '''
     # Create empty dataframe to store results
     results = pd.DataFrame(columns=['model', 'mean', 'std', 'min', 'max'])
+    # Create a cross validation object
+    cv = StratifiedKFold(n_splits=cv_folds, shuffle=True, random_state=random_state)
     # Iterate through models
     for model_name, model in models.items():
-        # Create a clone of the model if it is not pretrained
-        if not from_pretrained: 
-            model = clone(model)
         # Set the random state
         model.random_state = random_state
-        # Create a cross validation object
-        cv = StratifiedKFold(n_splits=cv_folds, shuffle=True, random_state=random_state)
+
         # Get the cross validation scores
         scores = cross_val_score(model, X, y, cv=cv, scoring=scoring)
+        
         # Concat the results to the dataframe
         results = pd.concat([results, pd.DataFrame({'model': model_name,
                                                     'mean': scores.mean(),
@@ -115,5 +114,6 @@ def test_models(models, X, y, bootstraps=100):
                                                     'mean': np.mean(scores),
                                                     'std': np.std(scores),
                                                     'min': np.min(scores),
-                                                    'max': np.max(scores)}, index=[0])])
+                                                    'max': np.max(scores)}, index=[0])
+                                                    ])
     return results
