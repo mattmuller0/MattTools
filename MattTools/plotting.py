@@ -562,19 +562,13 @@ def plot_training_roc_curve_ci(model, X, y, cv=StratifiedKFold(n_splits=5),
         preds = model.predict_proba(X[test])
         preds = preds[:, 1]
 
-        # debug code
-        # get the predictions argmax
-        print(f"preds: {np.argmax(preds, axis=1)}")
-        print(f"y[test]: {y[test]}")
+        # Get the accuracy
+        acc = model.score(X[test], y[test])
+        print(acc)
 
         # Get the ROC curve
-        tpr, fpr, _ = roc_curve(y[test], preds)
+        fpr, tpr, _ = roc_curve(y[test], preds)
         roc_auc = auc(fpr, tpr)
-
-        # debug code
-        print(f"tpr: {tpr}")
-        print(f"fpr: {fpr}")
-        print(f"roc_auc: {roc_auc}")
 
         interp_tpr = np.interp(mean_fpr, fpr, tpr)
         interp_tpr[0] = 0.0
@@ -594,12 +588,6 @@ def plot_training_roc_curve_ci(model, X, y, cv=StratifiedKFold(n_splits=5),
     # get the confidence intervals out of the array
     ci_auc = ci_auc[:, 1] - mean_auc
     ci_tpr = ci_tpr[:, 1] - mean_tpr
-
-    # add some debug code
-    print(f"mean_auc: {mean_auc}")
-    print(f"ci_auc: {ci_auc}")
-    print(f"mean_tpr: {mean_tpr}")
-    print(f"ci_tpr: {ci_tpr}")
 
     # Plot confidence intervals
     tprs_upper = np.minimum(mean_tpr + ci_tpr, 1)

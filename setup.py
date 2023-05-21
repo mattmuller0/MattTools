@@ -2,8 +2,8 @@ from setuptools import setup, find_packages
 
 setup(
     name='MattTools',
-    version='0.3.26',
-    packages=find_packages(),
+    version='0.4.1',
+    packages=find_packages(exclude=['tests*']),
     install_requires=[ 
             'numpy',
             'matplotlib',
@@ -11,6 +11,8 @@ setup(
             'scipy',
             'seaborn',
             'scikit-learn',
+            'statsmodels',
+            'tqdm',
             # add any other dependencies here
             ],
     author='Matthew Muller',

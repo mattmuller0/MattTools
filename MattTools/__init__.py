@@ -24,7 +24,7 @@ import pandas as pd
 import matplotlib.pyplot as plt
 import seaborn as sns
 
-from sklearn.metrics import RocCurveDisplay, confusion_matrix, ConfusionMatrixDisplay
+from sklearn.metrics import RocCurveDisplay, ConfusionMatrixDisplay
 from sklearn.metrics import roc_auc_score, roc_curve, auc, precision_recall_curve, average_precision_score
 from sklearn.model_selection import StratifiedKFold, KFold
 from sklearn.model_selection import cross_val_score, cross_validate
