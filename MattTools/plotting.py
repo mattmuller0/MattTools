@@ -333,15 +333,15 @@ def plot_roc_curve_ci(model, X, y, bootstraps=100,
     mean_fpr = np.linspace(0, 1, 100)
     fig, ax = plt.subplots(figsize=(6, 6))
     for i in range(bootstraps):
-        X, y = resample(X, y, stratify=y)
+        _X, _y = resample(X, y, stratify=y)
         # predict probabilities
-        yhat = model.predict_proba(X)
+        yhat = model.predict_proba(_X)
 
         # keep probabilities for the positive outcome only
         yhat = yhat[:, 1]
 
         # calculate roc curves
-        fpr, tpr, _ = roc_curve(y, yhat)
+        fpr, tpr, _ = roc_curve(_y, yhat)
 
         # calculate AUC
         roc_auc = auc(fpr, tpr)
@@ -362,6 +362,13 @@ def plot_roc_curve_ci(model, X, y, bootstraps=100,
     mean_auc, ci_auc = stats.mean_confidence_interval(aucs, confidence=0.95)[1]
     mean_tpr, ci_tpr = stats.mean_confidence_interval(tprs, confidence=0.95, axis=0)[1]
     mean_tpr[-1] = 1.0
+
+    print(ci_auc)
+    print(ci_tpr)
+
+    # get the confidence intervals out of the array
+    ci_auc = ci_auc[0, :]
+    ci_tpr = ci_tpr[0, :]
 
     # Plot confidence interval
     tprs_upper = np.minimum(mean_tpr + ci_tpr, 1)
