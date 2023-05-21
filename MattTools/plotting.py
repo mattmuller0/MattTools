@@ -330,6 +330,7 @@ def plot_roc_curve_ci(model, X, y, bootstraps=100,
     # Calculate ROC curve for each fold
     tprs = []
     aucs = []
+    fprs = []
     mean_fpr = np.linspace(0, 1, 10)
     fig, ax = plt.subplots(figsize=(6, 6))
     for i in range(bootstraps):
@@ -347,8 +348,9 @@ def plot_roc_curve_ci(model, X, y, bootstraps=100,
         roc_auc = auc(fpr, tpr)
         interp_tpr = np.interp(mean_fpr, fpr, tpr)
         interp_tpr[0] = 0.0
-        tprs.append(interp_tpr)
+        tprs.append(tpr)
         aucs.append(roc_auc)
+        fprs.append(fpr)
     
     # Plot chance level
     ax.plot([0, 1], [0, 1], "k--", label="chance level (AUC = 0.5)")
@@ -547,14 +549,17 @@ def plot_training_roc_curve_ci(model, X, y, cv=StratifiedKFold(n_splits=5),
     # Calculate ROC curve for each fold
     tprs = []
     aucs = []
-    mean_fpr = np.linspace(0, 1, 1000)
+    mean_fpr = np.linspace(0, 1, 100)
     fig, ax = plt.subplots(figsize=(6, 6))
     for fold, (train, test) in enumerate(cv.split(X, y)):
         # Fit model
         model.fit(X[train], y[train])
 
         # Get roc curve
-        tpr, fpr, _ = roc_curve(y[test], model.predict_proba(X[test])[:, 1])
+        preds = model.predict_proba(X[test])[:, 1]
+
+        # Get the ROC curve
+        tpr, fpr, _ = roc_curve(y[test], preds)
         roc_auc = auc(fpr, tpr)
 
         interp_tpr = np.interp(mean_fpr, fpr, tpr)
@@ -575,6 +580,12 @@ def plot_training_roc_curve_ci(model, X, y, cv=StratifiedKFold(n_splits=5),
     # get the confidence intervals out of the array
     ci_auc = ci_auc[:, 1] - mean_auc
     ci_tpr = ci_tpr[:, 1] - mean_tpr
+
+    # add some debug code
+    print(f"mean_auc: {mean_auc}")
+    print(f"ci_auc: {ci_auc}")
+    print(f"mean_tpr: {mean_tpr}")
+    print(f"ci_tpr: {ci_tpr}")
 
     # Plot confidence intervals
     tprs_upper = np.minimum(mean_tpr + ci_tpr, 1)
