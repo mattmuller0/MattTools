@@ -566,8 +566,8 @@ def plot_training_roc_curve_ci(model, X, y, cv=StratifiedKFold(n_splits=5),
     mean_auc = auc(mean_fpr, mean_tpr)
 
     # Calculate confidence intervals
-    mean_auc, ci_auc = stats.mean_confidence_interval(tprs, confidence=0.95)
-    mean_tpr, ci_tpr = stats.mean_confidence_interval(aucs, confidence=0.95, axis=0)
+    mean_auc, ci_auc = stats.mean_confidence_interval(aucs, confidence=0.95)
+    mean_tpr, ci_tpr = stats.mean_confidence_interval(tprs, confidence=0.95, axis=0)
     mean_tpr[-1] = 1.0
 
     # Plot confidence intervals
