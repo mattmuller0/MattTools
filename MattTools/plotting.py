@@ -422,13 +422,8 @@ def plot_decision_boundaries(model, X, y, figsize=(10, 10), feature_one = 0, fea
     # Show the plot
     plt.show()
 
-
-#=================================================================================================
-#
-#                        Plotting Training Functions
-#=================================================================================================
 # Function to plot ROC curve with mean and 95% confidence interval from cross-validation
-def plot_training_roc_curve_ci(model, X, y, cv=StratifiedKFold(n_splits=5),
+def plot_cross_validation_auroc(model, X, y, cv=StratifiedKFold(n_splits=5),
                       title="Mean ROC curve with 95% Confidence Interval",
                       save_path=None, *args):
     '''
@@ -488,6 +483,94 @@ def plot_training_roc_curve_ci(model, X, y, cv=StratifiedKFold(n_splits=5),
     ci_auc = 1.96 * np.std(aucs) / np.sqrt(cv.get_n_splits())
 
     ci_tpr = 1.96 * np.std(tprs, axis=0) / np.sqrt(cv.get_n_splits())
+    tprs_upper = np.minimum(mean_tpr + ci_tpr, 1)
+    tprs_lower = np.maximum(mean_tpr - ci_tpr, 0)
+    ax.fill_between(mean_fpr, tprs_lower, tprs_upper, color="grey",
+                    alpha=0.2, label="95% Confidence Interval")
+    
+    # Plot mean ROC curve
+    ax.plot(mean_fpr, mean_tpr, color="b",
+            label=f"ROC (AUC = {mean_auc:.2f} ± {ci_auc:.2f})",
+            lw=2, alpha=0.8)
+    ax.set(xlabel="False Positive Rate", ylabel="True Positive Rate",title=title, aspect='equal')
+    ax.legend(loc="lower right")
+
+    if save_path:
+        plt.savefig(save_path)
+    else:
+        plt.show()
+
+#=================================================================================================
+#
+#                        Plotting Training Functions
+#=================================================================================================
+# Function to plot ROC curve with mean and 95% confidence interval from cross-validation
+def plot_training_roc_curve_ci(model, X, y, cv=StratifiedKFold(n_splits=5),
+                      title="Mean ROC curve with 95% Confidence Interval",
+                      save_path=None, *args):
+    '''
+    Plot ROC curve with mean and 95% confidence interval from cross-validation.
+
+    Parameters:
+    -----------
+    model : sklearn model
+        Model to be used for cross validation.
+    X : numpy array or pandas DataFrame
+        Features used.
+    y : numpy array
+        Labels used for classes.
+    cv : resampling technique, default=StratifiedKFold(n_splits=5)
+        Cross validation object to be used.
+    title : str, default="Mean ROC curve with 95% Confidence Interval"
+        Title of plot.
+    save_path : str, default=None
+        String pointing where to save image.
+    *args : dict
+        Additional arguments to pass to the plot function
+    '''
+    # add warning that function will go defunct
+    print("This function will be defunct in the future. Please use plot_cross_validation_auroc instead.")
+
+    # Convert X to numpy array
+    if not isinstance(X, np.ndarray):
+        try:
+            X = X.to_numpy()
+        except:
+            raise ValueError("X must be convertable to numpy array")
+    
+    # Clone the model
+    model = clone(model)
+
+    # Calculate ROC curve for each fold
+    tprs = []
+    aucs = []
+    mean_fpr = np.linspace(0, 1, 100)
+    fig, ax = plt.subplots(figsize=(6, 6))
+    for fold, (train, test) in enumerate(cv.split(X, y)):
+        # Fit model
+        model.fit(X[train], y[train])
+
+        # Get roc curve
+        tpr, fpr, _ = roc_curve(y[test], model.predict_proba(X[test])[:, 1])
+        roc_auc = auc(fpr, tpr)
+
+        interp_tpr = np.interp(mean_fpr, fpr, tpr)
+        interp_tpr[0] = 0.0
+        tprs.append(interp_tpr)
+        aucs.append(roc_auc)
+    ax.plot([0, 1], [0, 1], "k--", label="chance level (AUC = 0.5)")
+
+    # Plot mean ROC curve with 95% confidence interval
+    mean_tpr = np.mean(tprs, axis=0)
+    mean_tpr[-1] = 1.0
+    mean_auc = auc(mean_fpr, mean_tpr)
+
+    # Calculate confidence intervals
+    mean_auc, ci_auc = stats.mean_confidence_interval(tprs, confidence=0.95)
+    mean_tpr, ci_tpr = stats.mean_confidence_interval(aucs, confidence=0.95, axis=0)
+    mean_tpr[-1] = 1.0
+
+    # Plot confidence intervals
     tprs_upper = np.minimum(mean_tpr + ci_tpr, 1)
     tprs_lower = np.maximum(mean_tpr - ci_tpr, 0)
     ax.fill_between(mean_fpr, tprs_lower, tprs_upper, color="grey",
