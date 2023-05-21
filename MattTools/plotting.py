@@ -556,6 +556,7 @@ def plot_training_roc_curve_ci(model, X, y, cv=StratifiedKFold(n_splits=5),
     for fold, (train, test) in enumerate(cv.split(X, y)):
         # Fit model
         model.fit(X[train], y[train])
+        print(model.classes_)
 
         # Get roc curve
         preds = model.predict_proba(X[test])
