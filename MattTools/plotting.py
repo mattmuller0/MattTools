@@ -388,6 +388,55 @@ def plot_roc_curve_ci(model, X, y, bootstraps=100,
     else:
         plt.show()
 
+# Function to plot the PRC curve of a model
+def plot_prc_curve(model, X, y, save_path=None, title="Precision-Recall Curve", *args):
+    '''
+    Plot the precision-recall curve of a model.
+    Parameters:
+    -----------
+    model : sklearn model
+        Model to be used for cross validation.
+    X : numpy array or pandas DataFrame
+        Features used.
+    y : numpy array
+        Labels used for classes.
+    save_path : str, default=None
+        String pointing where to save image.
+    title : str, default="Precision-Recall Curve"
+        Title of plot.
+    *args : dict
+        Additional keyword arguments to pass to the plot function.
+    '''
+    # Convert X to numpy array
+    if not isinstance(X, np.ndarray):
+        try:
+            X = X.to_numpy()
+        except:
+            raise ValueError("X must be convertable to numpy array")
+
+    # predict probabilities
+    yhat = model.predict_proba(X)
+
+    # keep probabilities for the positive outcome only
+    yhat = yhat[:, 1]
+
+    # calculate precision-recall curve
+    precision, recall, _ = precision_recall_curve(y, yhat)
+
+    # calculate average precision score
+    avg_precision = average_precision_score(y, yhat)
+
+    # plot the curve
+    plt.plot(recall, precision, marker=".", label=f"AP = {avg_precision:.2f}", *args)
+    plt.xlabel("Recall")
+    plt.ylabel("Precision")
+    plt.title(title)
+    plt.legend()
+    if save_path:
+        plt.savefig(save_path)
+    else:
+        plt.show()
+
 # Function to plot the decision boundaries of a model
 def plot_decision_boundaries(model, X, y, figsize=(10, 10), feature_one = 0, feature_two = 1):
     '''
@@ -702,3 +751,5 @@ def plot_training_probas(model, X, y,
         plt.savefig(save_path)
     else:
         plt.show()
+        
+    return(df)
