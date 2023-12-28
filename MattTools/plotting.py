@@ -502,9 +502,6 @@ def plot_cross_validation_auroc(model, X, y, cv=StratifiedKFold(n_splits=5),
     *args : dict
         Additional arguments to pass to the plot function
     '''
-    # add warning that function will go defunct
-    print("This function will be defunct in the future. Please use plot_cross_validation_auroc instead.")
-
     # Convert X to numpy array
     if not isinstance(X, np.ndarray):
         try:

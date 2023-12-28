@@ -166,3 +166,16 @@ def profiler(func, *args, **kwargs):
 
     # Return the result
     return result
+
+# Create logging file
+def create_logger(log_file):
+    '''
+    Summary: Function to create a logging file
+
+    log_file (str) : string value of the log file to create
+    '''
+    # Import the logging module
+    import logging
+
+    # Create the logging file
+    logging.basicConfig(filename=log_file, level=logging.DEBUG, format='%(asctime)s %(message)s')
