@@ -577,6 +577,97 @@ def plot_cross_validation_auroc(model, X, y, cv=StratifiedKFold(n_splits=5),
     else:
         plt.show()
 
+# Function to plot Precision-Recall curve with mean and 95% confidence interval from bootstrapping
+def plot_pr_curve_ci(model, X, y, bootstraps=100,
+                     title="Mean Precision-Recall curve with 95% Confidence Interval",
+                     save_path=None, *args):
+    '''
+    Plot Precision-Recall curve with mean and 95% confidence interval from bootstrapping.
+    Parameters:
+    -----------
+    model : sklearn model
+        Model to be used for cross validation.
+    X : numpy array or pandas DataFrame
+        Features used.
+    y : numpy array
+        Labels used for classes.
+    title : str, default="Mean Precision-Recall curve with 95% Confidence Interval"
+        Title of plot.
+    save_path : str, default=None
+        String pointing where to save image.
+    *args : dict
+        Additional keyword arguments to pass to the plot function.
+    '''
+    # Convert X to numpy array
+    if not isinstance(X, np.ndarray):
+        try:
+            X = X.to_numpy()
+        except:
+            raise ValueError("X must be convertible to numpy array")
+
+    # Calculate PR curve for each fold
+    precisions = []
+    aucs = []
+    recalls = []
+    mean_recall = np.linspace(0, 1, 100)
+    fig, ax = plt.subplots(figsize=(6, 6))
+    for i in range(bootstraps):
+        _X, _y = resample(X, y, stratify=y)
+        # predict probabilities
+        yhat = model.predict_proba(_X)
+
+        # keep probabilities for the positive outcome only
+        yhat = yhat[:, 1]
+
+        # calculate PR curves
+        precision, recall, _ = precision_recall_curve(_y, yhat)
+
+        # calculate AUC and interp precision
+        pr_auc = auc(recall, precision)
+        interp_precision = np.interp(mean_recall, recall[::-1], precision[::-1])
+        interp_precision[0] = 1.0
+
+        # append to lists
+        precisions.append(interp_precision)
+        aucs.append(pr_auc)
+        recalls.append(recall)
+
+    # Plot chance level
+    ax.plot([0, 1], [np.mean(y), np.mean(y)], "k--", label="chance level (AUC = 0.5)")
+
+    # Plot mean PR curve with 95% confidence interval
+    mean_precision = np.mean(precisions, axis=0)
+    mean_precision[-1] = 0.0
+
+    # Calculate confidence intervals
+    mean_auc, ci_auc = mean_confidence_interval(aucs, confidence=0.95)
+    mean_precision, ci_precision = mean_confidence_interval(precisions, confidence=0.95, axis=0)
+    mean_precision[-1] = 0.0
+
+    # get the confidence intervals out of the array
+    ci_auc = ci_auc[:, 1] - mean_auc
+    ci_precision = ci_precision[:, 1] - mean_precision
+
+    # Plot confidence interval
+    precisions_upper = np.minimum(mean_precision + ci_precision, 1)
+    precisions_lower = np.maximum(mean_precision - ci_precision, 0)
+    ax.fill_between(mean_recall, precisions_lower, precisions_upper, color="grey",
+                    alpha=0.2, label="95% Confidence Interval")
+
+    # Plot mean PR curve
+    ax.plot(mean_recall, mean_precision, color="b",
+            label=f"PR (AUC = {mean_auc.item():.2f} ± {ci_auc.item():.2f})",
+            lw=2, alpha=0.8, *args)
+    ax.set(xlabel="Recall", ylabel="Precision", title=title, aspect='equal')
+    ax.legend(loc="lower left")
+
+    if save_path:
+        plt.savefig(save_path)
+    else:
+        plt.show()
+
+
+
 #=================================================================================================
 #
 #                        Plotting Training Functions
