@@ -22,7 +22,7 @@ from sklearn.model_selection import StratifiedKFold, KFold
 from sklearn.base import clone
 import scipy.stats as st
 import statsmodels.stats.api as sms
-from scipy.stats import kruskal, zscore
+from scipy.stats import kruskal, zscore, wilcoxon
 from sklearn.utils import resample
 
 from MattTools import stats
@@ -827,7 +827,7 @@ def plot_training_probas(model, X, y,
 
     # statistical annotation
     groups = [df.loc[df["labels"] == label, "preds"] for label in np.unique(df["labels"])]
-    kruskal_wallis = kruskal(*groups)
+    kruskal_wallis = wilcoxon(*groups)
     if kruskal_wallis.pvalue < 0.05:
         x1, x2 = 0, 1
         y, h = df["preds"].max() + 0.02, 0.01
