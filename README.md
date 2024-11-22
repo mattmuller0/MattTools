@@ -9,5 +9,5 @@ A lot of this code needs to be cleaned up and made more general. I will do this 
 To install the GitHub repository using pip, run the following command:
 
 ```bash
-pip install git+https://github.com/matthewmuller0/MattTools.git
+pip install git+https://github.com/mattmuller0/MattTools.git
 ```
