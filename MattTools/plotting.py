@@ -25,7 +25,7 @@ import statsmodels.stats.api as sms
 from scipy.stats import kruskal, zscore, wilcoxon
 from sklearn.utils import resample
 
-from MattTools import stats
+from matttools import stats
 
 ######################################################################
 # Code Below

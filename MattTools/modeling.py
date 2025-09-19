@@ -26,7 +26,7 @@ import scipy.stats as st
 import statsmodels.stats.api as sms
 from scipy.stats import kruskal, zscore
 
-from MattTools.stats import Bootstrap
+from matttools.stats import Bootstrap
 
 # Function to train a dictionary of models and return the models
 def train_models(models, X, y, random_state=100):

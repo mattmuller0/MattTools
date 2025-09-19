@@ -16,29 +16,6 @@ import pandas as pd
 import random
 import sys
 
-
-# Funcition to plot progress bar
-def progress_bar(iteration, total, prefix='', suffix='', decimals=1, length=100, fill='█', printEnd="\r"):
-    """
-    Call in a loop to create terminal progress bar
-    @params:
-        iteration   - Required  : current iteration (Int)
-        total       - Required  : total iterations (Int)
-        prefix      - Optional  : prefix string (Str)
-        suffix      - Optional  : suffix string (Str)
-        decimals    - Optional  : positive number of decimals in percent complete (Int)
-        length      - Optional  : character length of bar (Int)
-        fill        - Optional  : bar fill character (Str)
-        printEnd    - Optional  : end character (e.g. "\r", "\r") (Str)
-    """
-    percent = ("{0:." + str(decimals) + "f}").format(100 * (iteration / float(total)))
-    filledLength = int(length * iteration // total)
-    bar = fill * filledLength + '-' * (length - filledLength)
-    print(f'\r{prefix} |{bar}| {percent}% {suffix}', end=printEnd)
-    # Print New Line on Complete
-    if iteration == total: 
-        print()
-
 # Function to set the random seed as a random integer
 def set_random_seed(seed=np.random.randint(1, 10000)):
     '''
@@ -98,7 +75,7 @@ def hide_warnings(warning_type='all'):
         import warnings
         # catch errors
         try:
-            warnings.filterwarnings('ignore', category=warning_type)\
+            warnings.filterwarnings('ignore', category=warning_type)
         
         except:
             print(f'Warning type {warning_type} not found. Showing all warnings.')
@@ -142,40 +119,3 @@ def stopwatch(func, *args, **kwargs):
 
     # Print the time elapsed
     print(f'Time elapsed: {end - start}')
-
-# Function to profile the execution of a function
-def profiler(func, *args, **kwargs):
-    '''
-    ####### WIP #######
-    Summary: Function to profile the execution of a function
-
-    func (function) : function to profile
-    *args (tuple) : tuple of arguments to pass to the function
-    **kwargs (dict) : dictionary of keyword arguments to pass to the function
-    '''
-    # Import the cProfile module
-    import cProfile
-
-    # Run the profiler
-    cProfile.run(func(*args, **kwargs))
-
-    # Print the profiler stats
-    profile = cProfile.Profile()
-    result = profile.runcall(func, *args, **kwargs)
-    profile.print_stats()
-
-    # Return the result
-    return result
-
-# Create logging file
-def create_logger(log_file):
-    '''
-    Summary: Function to create a logging file
-
-    log_file (str) : string value of the log file to create
-    '''
-    # Import the logging module
-    import logging
-
-    # Create the logging file
-    logging.basicConfig(filename=log_file, level=logging.DEBUG, format='%(asctime)s %(message)s')

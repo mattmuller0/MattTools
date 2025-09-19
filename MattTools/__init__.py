@@ -1,36 +1,49 @@
 """
-~~~~~~~~~~~~~~~~~~~~~~~
-~~~~~~ MattTools ~~~~~~
-~~~~~~~~~~~~~~~~~~~~~~~
+MattTools: A comprehensive toolkit for machine learning and bioinformatics analysis.
+
+This package provides robust statistical functions, machine learning utilities,
+visualization tools, and bioinformatics analysis capabilities designed for
+researchers and data scientists.
+
 Author: Matthew Muller
-Date: 11/24/2022
-
-This module contains functions for modeling and evaluating models as well as some utility functions.
-
-It is intended to be used as a module for other projects. It's just a collection of functions that I use in my projects and I wanted to make them available to others.
-
+Email: matt.alex.muller@gmail.com
+License: MIT
 """
 
-# Import necessary modules
-import os
-import sys
-import glob
-import time
-import random
+__version__ = "1.0.0"
+__author__ = "Matthew Muller"
+__email__ = "matt.alex.muller@gmail.com"
+__license__ = "MIT"
+
+# Import main modules for easy access
+from . import stats
+from . import modeling  
+from . import plotting
+from . import utils
+
+# Import key functions for convenience
+from .stats import mean_confidence_interval, Bootstrap
+from .utils import set_random_seed, hide_warnings
+
+__all__ = [
+    # Modules
+    "stats",
+    "modeling", 
+    "plotting",
+    "utils",
+    # Key functions
+    "mean_confidence_interval",
+    "Bootstrap",
+    "set_random_seed",
+    "hide_warnings",
+    # Metadata
+    "__version__",
+    "__author__",
+    "__email__",
+    "__license__",
+]
+
+# Configure warnings for cleaner output
 import warnings
-
-import numpy as np
-import pandas as pd
-import matplotlib.pyplot as plt
-import seaborn as sns
-
-from sklearn.metrics import RocCurveDisplay, ConfusionMatrixDisplay
-from sklearn.metrics import roc_auc_score, roc_curve, auc, precision_recall_curve, average_precision_score
-from sklearn.model_selection import StratifiedKFold, KFold
-from sklearn.model_selection import cross_val_score, cross_validate
-
-from sklearn.utils import resample
-from sklearn.base import clone
-import scipy.stats as st
-import statsmodels.stats.api as sms
-from scipy.stats import kruskal, zscore
+warnings.filterwarnings("ignore", category=FutureWarning)
+warnings.filterwarnings("ignore", category=UserWarning)
