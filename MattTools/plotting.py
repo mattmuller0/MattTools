@@ -29,13 +29,6 @@ from matttools import stats
 
 ######################################################################
 # Code Below
-def mean_confidence_interval(data, confidence=0.95):
-    a = 1.0 * np.array(data)
-    n = len(a)
-    m, se = np.mean(a), st.sem(a)
-    h = se * st.t.ppf((1 + confidence) / 2., n-1)
-    low, high = st.t.interval(confidence, len(data)-1, loc=np.mean(data), scale=st.sem(data))
-    return m, low, high
 
 
 ######################################################################
@@ -49,7 +42,10 @@ def plot_reduction(
     X : pd.DataFrame, y : pd.Series, 
     dim_1 = 0, dim_2 = 1,
     save_path = None, 
-    figsize = (10, 10), *args
+    figsize = (10, 10), 
+    title = None,
+    labels = None,
+    *args
     ):
     '''
     Summary: Function to plot the PCA model
@@ -75,9 +71,21 @@ def plot_reduction(
     # Plot the data
     plt.figure(figsize=figsize)
     plt.scatter(X_reduced[:, 0], X_reduced[:, 1], c=y, *args)
-    plt.title(f'{reduction.__class__.__name__} Plot')
-    plt.xlabel(f'{reduction.__class__.__name__} {dim_1} [{PCA.explained_variance_ratio_[dim_1]*100:0.4f}%]')
-    plt.ylabel(f'{reduction.__class__.__name__} {dim_2} [{PCA.explained_variance_ratio_[dim_2]*100:0.4f}%]')
+    
+    # Set title
+    if title:
+        plt.title(title)
+    else:
+        plt.title(f'{reduction.__class__.__name__} Plot')
+    
+    # Handle explained variance ratio for different reduction types
+    if hasattr(reduction, 'explained_variance_ratio_'):
+        plt.xlabel(f'{reduction.__class__.__name__} {dim_1} [{reduction.explained_variance_ratio_[dim_1]*100:0.4f}%]')
+        plt.ylabel(f'{reduction.__class__.__name__} {dim_2} [{reduction.explained_variance_ratio_[dim_2]*100:0.4f}%]')
+    else:
+        plt.xlabel(f'{reduction.__class__.__name__} {dim_1}')
+        plt.ylabel(f'{reduction.__class__.__name__} {dim_2}')
+    
     if save_path:
         plt.savefig(save_path)
     else:
@@ -640,8 +648,8 @@ def plot_pr_curve_ci(model, X, y, bootstraps=100,
     mean_precision[-1] = 0.0
 
     # Calculate confidence intervals
-    mean_auc, ci_auc = mean_confidence_interval(aucs, confidence=0.95)
-    mean_precision, ci_precision = mean_confidence_interval(precisions, confidence=0.95, axis=0)
+    mean_auc, ci_auc = stats.mean_confidence_interval(aucs, confidence=0.95)
+    mean_precision, ci_precision = stats.mean_confidence_interval(precisions, confidence=0.95, axis=0)
     mean_precision[-1] = 0.0
 
     # get the confidence intervals out of the array

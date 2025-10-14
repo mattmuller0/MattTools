@@ -64,15 +64,16 @@ class TestPlottingUtilities:
     """Tests for plotting utility functions."""
     
     def test_mean_confidence_interval_plotting(self):
-        """Test that mean_confidence_interval function exists in plotting module."""
-        # Import to check it exists
-        from matttools.plotting import mean_confidence_interval
+        """Test that mean_confidence_interval function exists and works correctly."""
+        # Import from stats module (no longer duplicated in plotting)
+        from matttools.stats import mean_confidence_interval
         
         # Test basic functionality
         data = np.random.normal(100, 15, 1000)
         result = mean_confidence_interval(data, confidence=0.95)
         
-        # Should return mean, low, high
-        assert len(result) == 3
-        mean, low, high = result
-        assert low < mean < high
+        # Should return mean and CI array
+        assert len(result) == 2
+        mean, ci = result
+        assert ci.shape == (1, 2)  # CI is returned as array
+        assert ci[0, 0] < mean < ci[0, 1]  # low < mean < high

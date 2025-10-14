@@ -9,6 +9,7 @@
 # This file contains functions for modeling and evaluating models.
 
 # Library Imports
+from typing import Dict, Any, Union
 from matplotlib import pyplot as plt
 import seaborn as sns
 import numpy as np
@@ -29,7 +30,12 @@ from scipy.stats import kruskal, zscore
 from matttools.stats import Bootstrap
 
 # Function to train a dictionary of models and return the models
-def train_models(models, X, y, random_state=100):
+def train_models(
+    models: Dict[str, Any], 
+    X: Union[np.ndarray, pd.DataFrame], 
+    y: Union[np.ndarray, pd.Series], 
+    random_state: int = 100
+) -> Dict[str, Any]:
     '''
     Summary: Function to train a dictionary of models and return the models
 

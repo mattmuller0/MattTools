@@ -27,3 +27,6 @@ venv/
 *.tmp
 *.temp
 *.log
+
+# Github specific
+.github/copilot-instructions.md
