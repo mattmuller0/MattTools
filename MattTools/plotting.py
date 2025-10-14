@@ -375,7 +375,7 @@ def plot_roc_curve_ci(model, X, y, bootstraps=100,
     mean_tpr[-1] = 1.0
 
     # get the confidence intervals out of the array
-    ci_auc = ci_auc[:, 1] - mean_auc
+    ci_auc = ci_auc[0, 1] - mean_auc
     ci_tpr = ci_tpr[:, 1] - mean_tpr
 
     # Plot confidence interval
@@ -564,7 +564,7 @@ def plot_cross_validation_auroc(model, X, y, cv=StratifiedKFold(n_splits=5),
     mean_tpr[-1] = 1.0
 
     # get the confidence intervals out of the array
-    ci_auc = ci_auc[:, 1] - mean_auc
+    ci_auc = ci_auc[0, 1] - mean_auc
     ci_tpr = ci_tpr[:, 1] - mean_tpr
 
     # Plot confidence intervals
@@ -653,7 +653,7 @@ def plot_pr_curve_ci(model, X, y, bootstraps=100,
     mean_precision[-1] = 0.0
 
     # get the confidence intervals out of the array
-    ci_auc = ci_auc[:, 1] - mean_auc
+    ci_auc = ci_auc[0, 1] - mean_auc
     ci_precision = ci_precision[:, 1] - mean_precision
 
     # Plot confidence interval
@@ -761,7 +761,7 @@ def plot_training_roc_curve_ci(model, X, y, cv=StratifiedKFold(n_splits=5),
     mean_tpr[-1] = 1.0
 
     # get the confidence intervals out of the array
-    ci_auc = ci_auc[:, 1] - mean_auc
+    ci_auc = ci_auc[0, 1] - mean_auc
     ci_tpr = ci_tpr[:, 1] - mean_tpr
 
     # Plot confidence intervals
