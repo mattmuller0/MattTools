@@ -11,6 +11,13 @@ License: MIT
 
 import logging
 
+# Import main modules for easy access
+from . import modeling, plotting, stats, utils
+
+# Import key functions for convenience
+from .stats import Bootstrap, mean_confidence_interval
+from .utils import hide_warnings, set_random_seed
+
 __version__ = "1.0.0"
 __author__ = "Matthew Muller"
 __email__ = "matt.alex.muller@gmail.com"
@@ -18,13 +25,6 @@ __license__ = "MIT"
 
 # Configure package-level logging
 logging.getLogger(__name__).addHandler(logging.NullHandler())
-
-# Import main modules for easy access
-from . import modeling, plotting, stats, utils
-
-# Import key functions for convenience
-from .stats import Bootstrap, mean_confidence_interval
-from .utils import hide_warnings, set_random_seed
 
 __all__ = [
     # Modules

@@ -13,8 +13,6 @@ from sklearn.base import clone
 from sklearn.model_selection import StratifiedKFold, cross_val_score
 from sklearn.utils import resample
 
-from matttools.stats import Bootstrap
-
 # Configure module logger
 logger = logging.getLogger(__name__)
 

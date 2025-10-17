@@ -76,7 +76,6 @@ def mean_confidence_interval(
 
     # Both s=std() and se=sem() use unbiased estimators (ddof=1).
     m = np.mean(a, axis=axis)
-    s = np.std(a, ddof=1, axis=axis)
     se = st.sem(a, axis=axis)
     t = st.t.ppf((1 + confidence) / 2.0, n - 1)
     ci = np.c_[m - se * t, m + se * t]
