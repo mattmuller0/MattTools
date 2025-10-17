@@ -5,7 +5,11 @@ Python toolkit for ML and bioinformatics: statistical analysis, model evaluation
 ## Install
 
 ```bash
+# pip
 pip install git+https://github.com/mattmuller0/MattTools.git
+
+# uv (faster)
+uv pip install git+https://github.com/mattmuller0/MattTools.git
 ```
 
 ## Usage
@@ -51,7 +55,7 @@ result, elapsed = mt.utils.stopwatch(func, args)
 ```bash
 git clone https://github.com/mattmuller0/MattTools.git
 cd MattTools
-pip install -e ".[dev]"
+pip install -e ".[dev]"  # or: uv pip install -e ".[dev]"
 pytest
 ```
 
