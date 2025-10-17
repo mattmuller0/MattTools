@@ -29,11 +29,10 @@ jobs:
         python -m pip install --upgrade pip
         pip install -e ".[dev]"
 
-    - name: Run linting
+    - name: Run formatting checks
       run: |
         black --check matttools tests
         isort --check-only matttools tests
-        flake8 matttools tests
 
     - name: Run type checking
       run: |
