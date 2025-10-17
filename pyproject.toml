@@ -62,6 +62,9 @@ dev = [
     "pytest-cov>=4.0.0",
     "black>=22.0.0",
     "isort>=5.10.0",
+    "mypy>=1.0.0",
+    "flake8>=6.0.0",
+    "pre-commit>=3.0.0",
 ]
 all = [
     "matttools[bio,plotting,dev]",
@@ -75,6 +78,9 @@ where = ["."]
 include = ["matttools*"]
 exclude = ["tests*"]
 
+[tool.setuptools.package-data]
+matttools = ["py.typed"]
+
 [tool.black]
 line-length = 88
 target-version = ['py310', 'py311', 'py312']
@@ -87,5 +93,27 @@ known_first_party = ["matttools"]
 
 [tool.pytest.ini_options]
 minversion = "7.0"
-addopts = "-ra -q"
+addopts = "-ra -q --strict-markers --cov=matttools --cov-report=term-missing --cov-report=html"
 testpaths = ["tests"]
+python_files = ["test_*.py"]
+python_classes = ["Test*"]
+python_functions = ["test_*"]
+
+[tool.coverage.run]
+source = ["matttools"]
+omit = ["*/tests/*", "*/__pycache__/*"]
+
+[tool.coverage.report]
+exclude_lines = [
+    "pragma: no cover",
+    "def __repr__",
+    "raise AssertionError",
+    "raise NotImplementedError",
+    "if __name__ == .__main__.:",
+    "if TYPE_CHECKING:",
+]
+
+[tool.flake8]
+max-line-length = 88
+extend-ignore = ["E203", "W503"]
+exclude = [".git", "__pycache__", "build", "dist", ".eggs"]

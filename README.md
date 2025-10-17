@@ -1,18 +1,11 @@
 # MattTools
 
-Personal Python toolkit for ML and bioinformatics research.
+Python toolkit for ML and bioinformatics: statistical analysis, model evaluation, and visualization.
 
-## Installation
+## Install
 
 ```bash
 pip install git+https://github.com/mattmuller0/MattTools.git
-```
-
-For development:
-```bash
-git clone https://github.com/mattmuller0/MattTools.git
-cd MattTools
-pip install -e ".[dev]"
 ```
 
 ## Usage
@@ -20,30 +13,48 @@ pip install -e ".[dev]"
 ```python
 import matttools as mt
 import numpy as np
+from sklearn.ensemble import RandomForestClassifier
 
-# Statistical analysis
+# Confidence intervals
 data = np.random.normal(100, 15, 100)
-mean, ci = mt.stats.mean_confidence_interval(data)
-print(f"Mean: {mean:.2f}, CI: {ci}")
+mean, ci = mt.mean_confidence_interval(data)
 
-# Bootstrap analysis
-bootstrap = mt.stats.Bootstrap(data)
-results = bootstrap.resample(n_samples=1000)
+# Bootstrap resampling
+bootstrap = mt.Bootstrap(n_bootstrap=100, rng_seed=42)
+for train_idx, _ in bootstrap.split(X, y):
+    model.fit(X[train_idx], y[train_idx])
+
+# Model evaluation
+models = {'rf': RandomForestClassifier(), 'lr': LogisticRegression()}
+results = mt.modeling.cross_val_models(models, X, y)
+
+# Visualization
+mt.plotting.plot_roc_curve_ci(model, X_test, y_test)
+
+# Utilities
+seed = mt.set_random_seed(42)
+result, elapsed = mt.utils.stopwatch(func, args)
 ```
 
-## Modules
+## API
 
-- **stats**: Confidence intervals, bootstrap methods, statistical tests
-- **modeling**: ML model training and evaluation utilities
-- **plotting**: ROC curves, dimensionality reduction plots
-- **utils**: Random seeds, warnings control, data helpers
+**stats** • `mean_confidence_interval` • `bootstrap_auc_confidence` • `Bootstrap` • `odds_ratio`
 
-## Testing
+**modeling** • `train_models` • `cross_val_models` • `test_models`
+
+**plotting** • `plot_scree` • `plot_roc_curve` • `plot_confusion_matrix` • `plot_reduction`
+
+**utils** • `set_random_seed` • `hide_warnings` • `get_memory_usage` • `stopwatch`
+
+## Development
 
 ```bash
-pytest tests/
+git clone https://github.com/mattmuller0/MattTools.git
+cd MattTools
+pip install -e ".[dev]"
+pytest
 ```
 
-## License
+Python ≥3.10 • NumPy • Pandas • scikit-learn • SciPy • Matplotlib • Seaborn
 
-MIT License
+MIT License • Matthew Muller

@@ -1,5 +1,4 @@
-"""
-MattTools: A comprehensive toolkit for machine learning and bioinformatics analysis.
+"""MattTools: A comprehensive toolkit for machine learning and bioinformatics analysis.
 
 This package provides robust statistical functions, machine learning utilities,
 visualization tools, and bioinformatics analysis capabilities designed for
@@ -10,25 +9,27 @@ Email: matt.alex.muller@gmail.com
 License: MIT
 """
 
+import logging
+
 __version__ = "1.0.0"
 __author__ = "Matthew Muller"
 __email__ = "matt.alex.muller@gmail.com"
 __license__ = "MIT"
 
+# Configure package-level logging
+logging.getLogger(__name__).addHandler(logging.NullHandler())
+
 # Import main modules for easy access
-from . import stats
-from . import modeling  
-from . import plotting
-from . import utils
+from . import modeling, plotting, stats, utils
 
 # Import key functions for convenience
-from .stats import mean_confidence_interval, Bootstrap
-from .utils import set_random_seed, hide_warnings
+from .stats import Bootstrap, mean_confidence_interval
+from .utils import hide_warnings, set_random_seed
 
 __all__ = [
     # Modules
     "stats",
-    "modeling", 
+    "modeling",
     "plotting",
     "utils",
     # Key functions
@@ -42,8 +43,3 @@ __all__ = [
     "__email__",
     "__license__",
 ]
-
-# Configure warnings for cleaner output
-import warnings
-warnings.filterwarnings("ignore", category=FutureWarning)
-warnings.filterwarnings("ignore", category=UserWarning)
