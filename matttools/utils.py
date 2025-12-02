@@ -4,16 +4,32 @@ This module provides utility functions for random seed management,
 warning control, memory monitoring, and function timing.
 """
 
+import functools
 import logging
+import platform
 import random
 import time
 import warnings
-from typing import Any, Callable, Optional, Type, Union
+from typing import Any, Callable, Optional, Type, TypeVar, Union
 
 import numpy as np
 
+from ._base import ArrayLike, ensure_array
+
 # Configure module logger
 logger = logging.getLogger(__name__)
+
+F = TypeVar("F", bound=Callable[..., Any])
+
+__all__ = [
+    "ArrayLike",
+    "ensure_array",
+    "set_random_seed",
+    "hide_warnings",
+    "get_memory_usage",
+    "print_memory_usage",
+    "stopwatch",
+]
 
 
 def set_random_seed(seed: Optional[int] = None, verbose: bool = True) -> int:
@@ -21,44 +37,31 @@ def set_random_seed(seed: Optional[int] = None, verbose: bool = True) -> int:
 
     Args:
         seed: Integer value of the random seed. If None, generates a random seed.
-        verbose: If True, logs the seed being set. Default is True.
+        verbose: If True, logs the seed being set.
 
     Returns:
         The seed that was set.
 
     Note:
-        Sets random seeds for Python's random, NumPy, TensorFlow, and PyTorch if available.
-        sklearn classes must be configured individually with random_state parameter.
-
-    Example:
-        >>> seed = set_random_seed(42)
-        >>> seed = set_random_seed()  # Generates random seed
+        Sets seeds for Python's random, NumPy, TensorFlow, and PyTorch if available.
     """
     if seed is None:
-        rng = np.random.default_rng()
-        seed = int(rng.integers(1, 10000))
+        seed = int(np.random.default_rng().integers(1, 10000))
 
     if verbose:
-        logger.info(f"Setting random seed to {seed} for reproducibility.")
+        logger.info(f"Setting random seed to {seed}")
 
-    # Set Python's random seed
     random.seed(seed)
-
-    # Set numpy random seed (legacy compatibility)
     np.random.seed(seed)
 
-    # Set TensorFlow seed if available
     try:
         import tensorflow as tf
-
         tf.random.set_seed(seed)
     except ImportError:
         pass
 
-    # Set PyTorch seed if available
     try:
         import torch
-
         torch.manual_seed(seed)
         if torch.cuda.is_available():
             torch.cuda.manual_seed_all(seed)
@@ -74,36 +77,24 @@ def hide_warnings(
     """Control warning display based on warning type.
 
     Args:
-        warning_type: Type of warning to control. Options:
-            - "all": All warnings
-            - "none": Reset to default (show all warnings)
-            - Warning class: Specific warning type (e.g., FutureWarning)
-        action: Action to take. Options: "ignore", "default", "error", "always", "module", "once"
+        warning_type: "all", "none", or a Warning class (e.g., FutureWarning).
+        action: "ignore", "default", "error", "always", "module", or "once".
 
     Raises:
         ValueError: If warning_type is not valid.
-
-    Example:
-        >>> hide_warnings("all")  # Hide all warnings
-        >>> hide_warnings(FutureWarning)  # Hide only FutureWarning
-        >>> hide_warnings("none")  # Show all warnings
     """
     if warning_type == "none":
         warnings.filterwarnings("default")
-        return
-
-    if warning_type == "all":
+    elif warning_type == "all":
         warnings.filterwarnings(action)
-        return
-
-    # Handle specific warning types
-    try:
-        warnings.filterwarnings(action, category=warning_type)
-    except (TypeError, ValueError) as e:
-        raise ValueError(
-            f"Invalid warning type '{warning_type}'. Must be 'all', 'none', "
-            f"or a valid Warning class."
-        ) from e
+    else:
+        try:
+            warnings.filterwarnings(action, category=warning_type)
+        except (TypeError, ValueError) as e:
+            raise ValueError(
+                f"Invalid warning type '{warning_type}'. "
+                "Must be 'all', 'none', or a Warning class."
+            ) from e
 
 
 def get_memory_usage() -> float:
@@ -114,63 +105,46 @@ def get_memory_usage() -> float:
 
     Raises:
         ImportError: If resource module is not available (Windows).
-
-    Example:
-        >>> memory_mb = get_memory_usage()
-        >>> print(f"Using {memory_mb:.2f} MB")
     """
     try:
         import resource
-
-        usage_bytes = resource.getrusage(resource.RUSAGE_SELF).ru_maxrss
+        usage = resource.getrusage(resource.RUSAGE_SELF).ru_maxrss
         # macOS reports in bytes, Linux in kilobytes
-        import platform
-
-        if platform.system() == "Darwin":
-            return usage_bytes / (1024 * 1024)
-        else:
-            return usage_bytes / 1024
+        return usage / (1024 * 1024) if platform.system() == "Darwin" else usage / 1024
     except ImportError as e:
         raise ImportError(
-            "Memory usage monitoring requires the 'resource' module, "
-            "which is not available on Windows."
+            "Memory monitoring requires 'resource' module (not available on Windows)."
         ) from e
 
 
 def print_memory_usage() -> None:
-    """Print the current memory usage.
-
-    Example:
-        >>> print_memory_usage()
-        Current memory usage: 45.23 MB
-    """
+    """Print current memory usage."""
     try:
-        memory_mb = get_memory_usage()
-        print(f"Current memory usage: {memory_mb:.2f} MB")
+        print(f"Current memory usage: {get_memory_usage():.2f} MB")
     except ImportError as e:
-        logger.warning(f"Cannot print memory usage: {e}")
+        logger.warning(f"Cannot get memory usage: {e}")
 
 
-def stopwatch(func: Callable, *args: Any, **kwargs: Any) -> tuple[Any, float]:
-    """Time the execution of a function.
+def stopwatch(func: F) -> F:
+    """Decorator to time function execution.
 
     Args:
         func: Function to time.
-        *args: Positional arguments to pass to the function.
-        **kwargs: Keyword arguments to pass to the function.
 
     Returns:
-        Tuple of (function_result, elapsed_time_seconds).
+        Wrapped function that logs execution time.
 
     Example:
-        >>> def slow_function(n):
+        >>> @stopwatch
+        ... def slow_function(n):
         ...     return sum(range(n))
-        >>> result, elapsed = stopwatch(slow_function, 1000000)
-        >>> print(f"Result: {result}, Time: {elapsed:.4f}s")
+        >>> result = slow_function(1000000)
     """
-    start = time.perf_counter()
-    result = func(*args, **kwargs)
-    elapsed = time.perf_counter() - start
-
-    logger.info(f"Function {func.__name__} executed in {elapsed:.4f} seconds")
-    return result, elapsed
+    @functools.wraps(func)
+    def wrapper(*args: Any, **kwargs: Any) -> Any:
+        start = time.perf_counter()
+        result = func(*args, **kwargs)
+        elapsed = time.perf_counter() - start
+        logger.info(f"{func.__name__} executed in {elapsed:.4f}s")
+        return result
+    return wrapper  # type: ignore[return-value]

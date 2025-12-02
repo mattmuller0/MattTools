@@ -8,7 +8,11 @@ A Python toolkit for machine learning and bioinformatics: statistical analysis, 
 ## Installation
 
 ```bash
+# pip
 pip install git+https://github.com/mattmuller0/MattTools.git
+
+# uv
+uv pip install git+https://github.com/mattmuller0/MattTools.git
 ```
 
 For development:
