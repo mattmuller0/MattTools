@@ -5,192 +5,146 @@ cross-validation, and evaluating model performance.
 """
 
 import logging
-from typing import Any, Dict, Optional, Union
+from typing import Dict, Optional, Union
 
 import numpy as np
 import pandas as pd
-from sklearn.base import clone
-from sklearn.model_selection import StratifiedKFold, cross_val_score
+from sklearn.base import BaseEstimator, clone
+from sklearn.model_selection import BaseCrossValidator, StratifiedKFold, cross_val_score
 from sklearn.utils import resample
 
-# Configure module logger
+from ._base import ArrayLike, ensure_array
+
 logger = logging.getLogger(__name__)
+
+__all__ = ["train_models", "cross_val_models", "test_models"]
 
 
 def train_models(
-    models: Dict[str, Any],
-    X: Union[np.ndarray, pd.DataFrame],
-    y: Union[np.ndarray, pd.Series],
+    models: Dict[str, BaseEstimator],
+    X: ArrayLike,
+    y: ArrayLike,
     random_state: Optional[int] = None,
-) -> Dict[str, Any]:
+) -> Dict[str, BaseEstimator]:
     """Train a dictionary of models and return fitted models.
 
     Args:
         models: Dictionary of model name to model instance.
-        X: Feature data (numpy array or pandas DataFrame).
-        y: Target data (numpy array or pandas Series).
-        random_state: Random state to set for models that support it.
+        X: Feature data.
+        y: Target data.
+        random_state: Random state for models that support it.
 
     Returns:
-        Dictionary of trained models with the same keys as input.
-
-    Note:
-        Only models with a 'random_state' parameter will have it set.
-        Models are cloned before training to avoid modifying the originals.
-
-    Example:
-        >>> from sklearn.ensemble import RandomForestClassifier
-        >>> from sklearn.linear_model import LogisticRegression
-        >>> models = {
-        ...     'rf': RandomForestClassifier(),
-        ...     'lr': LogisticRegression()
-        ... }
-        >>> trained = train_models(models, X_train, y_train, random_state=42)
+        Dictionary of trained models with the same keys.
     """
-    trained_models = {}
+    X = ensure_array(X)
+    y = ensure_array(y)
+    trained = {}
 
-    for model_name, model in models.items():
-        # Create a clone to avoid modifying the original
-        model_clone = clone(model)
-
-        # Set random state if model supports it
-        if random_state is not None and hasattr(model_clone, "random_state"):
-            model_clone.set_params(random_state=random_state)
-
-        # Fit the model
+    for name, model in models.items():
+        if random_state is not None and hasattr(model, "random_state"):
+            model.set_params(random_state=random_state)
         try:
-            model_clone.fit(X, y)
-            trained_models[model_name] = model_clone
+            model.fit(X, y)
+            trained[name] = model
         except Exception as e:
-            logger.error(f"Failed to train model '{model_name}': {e}")
+            logger.error(f"Failed to train '{name}': {e}")
             raise
 
-    return trained_models
-
+    return trained
 
 def cross_val_models(
-    models: Dict[str, Any],
-    X: Union[np.ndarray, pd.DataFrame],
-    y: Union[np.ndarray, pd.Series],
-    cv_folds: int = 5,
+    models: Dict[str, BaseEstimator],
+    X: ArrayLike,
+    y: ArrayLike,
+    cv: Optional[Union[int, BaseCrossValidator]] = None,
     scoring: str = "roc_auc",
     random_state: Optional[int] = None,
 ) -> pd.DataFrame:
-    """Cross-validate multiple models and return metrics as a DataFrame.
+    """Cross-validate multiple models and return metrics.
 
     Args:
         models: Dictionary of model name to model instance.
-        X: Feature data (numpy array or pandas DataFrame).
-        y: Target data (numpy array or pandas Series).
-        cv_folds: Number of cross-validation folds. Default is 5.
-        scoring: Scoring metric to use. Default is 'roc_auc'.
-        random_state: Random state for cross-validation splitting.
+        X: Feature data.
+        y: Target data.
+        cv: Number of folds or CV splitter. Default is 5-fold StratifiedKFold.
+        scoring: Scoring metric. Default is 'roc_auc'.
+        random_state: Random state for CV splitting.
 
     Returns:
         DataFrame with columns: model, mean, std, min, max.
-
-    Example:
-        >>> from sklearn.ensemble import RandomForestClassifier
-        >>> from sklearn.linear_model import LogisticRegression
-        >>> models = {'rf': RandomForestClassifier(), 'lr': LogisticRegression()}
-        >>> results = cross_val_models(models, X, y, cv_folds=5)
     """
-    # Create cross validation object
-    cv = StratifiedKFold(n_splits=cv_folds, shuffle=True, random_state=random_state)
+    X = ensure_array(X)
+    y = ensure_array(y)
 
-    # Collect results
-    results_list = []
+    if cv is None:
+        cv = StratifiedKFold(n_splits=5, shuffle=True, random_state=random_state)
+    elif isinstance(cv, int):
+        cv = StratifiedKFold(n_splits=cv, shuffle=True, random_state=random_state)
 
-    for model_name, model in models.items():
-        # Clone model to avoid modification
+    results = []
+    for name, model in models.items():
         model_clone = clone(model)
-
-        # Set random state if model supports it
         if random_state is not None and hasattr(model_clone, "random_state"):
             model_clone.set_params(random_state=random_state)
-
         try:
-            # Get cross validation scores
             scores = cross_val_score(model_clone, X, y, cv=cv, scoring=scoring)
-
-            # Append results
-            results_list.append(
-                {
-                    "model": model_name,
-                    "mean": scores.mean(),
-                    "std": scores.std(),
-                    "min": scores.min(),
-                    "max": scores.max(),
-                }
-            )
+            results.append({
+                "model": name,
+                "mean": scores.mean(),
+                "std": scores.std(),
+                "min": scores.min(),
+                "max": scores.max(),
+            })
         except Exception as e:
-            logger.error(f"Failed to cross-validate model '{model_name}': {e}")
+            logger.error(f"Failed to cross-validate '{name}': {e}")
             raise
 
-    # Convert to DataFrame
-    return pd.DataFrame(results_list)
+    return pd.DataFrame(results)
 
 
 def test_models(
-    models: Dict[str, Any],
-    X: Union[np.ndarray, pd.DataFrame],
-    y: Union[np.ndarray, pd.Series],
-    n_bootstraps: int = 100,
+    models: Dict[str, BaseEstimator],
+    X: ArrayLike,
+    y: ArrayLike,
+    n_bootstrap: int = 100,
     random_state: Optional[int] = None,
 ) -> pd.DataFrame:
     """Test fitted models using bootstrap resampling.
 
     Args:
         models: Dictionary of fitted model name to model instance.
-        X: Feature data (numpy array or pandas DataFrame).
-        y: Target data (numpy array or pandas Series).
-        n_bootstraps: Number of bootstrap iterations. Default is 100.
-        random_state: Random state for bootstrap resampling.
+        X: Feature data.
+        y: Target data.
+        n_bootstrap: Number of bootstrap iterations.
+        random_state: Random state for resampling.
 
     Returns:
-        DataFrame with columns: model, mean, std, min, max containing
-        accuracy scores for classifiers or R-squared for regressors.
-
-    Note:
-        Models must already be fitted before calling this function.
-
-    Example:
-        >>> from sklearn.ensemble import RandomForestClassifier
-        >>> models = {'rf': RandomForestClassifier().fit(X_train, y_train)}
-        >>> results = test_models(models, X_test, y_test, n_bootstraps=100)
+        DataFrame with columns: model, mean, std, min, max.
     """
-    results_list = []
+    X = ensure_array(X)
+    y = ensure_array(y)
+    results = []
 
-    for model_name, model in models.items():
+    for name, model in models.items():
         scores = []
-        for i in range(n_bootstraps):
+        for i in range(n_bootstrap):
             try:
-                # Resample with stratification
-                X_resample, y_resample = resample(
-                    X,
-                    y,
-                    stratify=y,
-                    random_state=random_state + i if random_state else None,
-                )
-                score = model.score(X_resample, y_resample)
-                scores.append(score)
+                seed = random_state + i if random_state else None
+                X_boot, y_boot = resample(X, y, stratify=y, random_state=seed)
+                scores.append(model.score(X_boot, y_boot))
             except Exception as e:
-                logger.warning(
-                    f"Bootstrap iteration {i} failed for model '{model_name}': {e}"
-                )
-                continue
+                logger.warning(f"Bootstrap {i} failed for '{name}': {e}")
 
         if scores:
-            results_list.append(
-                {
-                    "model": model_name,
-                    "mean": np.mean(scores),
-                    "std": np.std(scores),
-                    "min": np.min(scores),
-                    "max": np.max(scores),
-                }
-            )
+            results.append({
+                "model": name,
+                "mean": np.mean(scores),
+                "std": np.std(scores),
+                "min": np.min(scores),
+                "max": np.max(scores),
+            })
         else:
-            logger.error(f"No successful bootstrap iterations for model '{model_name}'")
+            logger.error(f"No successful bootstrap iterations for '{name}'")
 
-    return pd.DataFrame(results_list)
+    return pd.DataFrame(results)

@@ -55,13 +55,12 @@ class TestPlotReduction:
                 dim_1=0,
                 dim_2=1,
                 title="Test PCA Plot",
-                labels=["Class 0", "Class 1"],
             )
             success = True
         except Exception:
             success = False
 
-        assert success, "plot_reduction with labels should execute without errors"
+        assert success, "plot_reduction with title should execute without errors"
         plt.close("all")
 
 

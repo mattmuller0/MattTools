@@ -1,991 +1,484 @@
-"""Plotting utilities for machine learning and data analysis.
+"""Plotting utilities for machine learning model evaluation.
 
-This module provides visualization functions for dimensionality reduction,
-ROC curves, confusion matrices, and model performance metrics.
+This module provides visualization functions for ROC curves, PR curves,
+confusion matrices, dimensionality reduction, and model comparison.
 """
 
 import logging
 from pathlib import Path
-from typing import Any, Dict, List, Optional, Tuple, Union
+from typing import Dict, List, Literal, Optional, Tuple, Union
 
 import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
 import seaborn as sns
-from scipy.stats import wilcoxon
-from sklearn.base import clone
+from sklearn.base import BaseEstimator, clone
 from sklearn.decomposition import PCA
 from sklearn.metrics import (
     ConfusionMatrixDisplay,
-    RocCurveDisplay,
     auc,
     average_precision_score,
     confusion_matrix,
     precision_recall_curve,
-    roc_auc_score,
     roc_curve,
 )
-from sklearn.model_selection import StratifiedKFold
+from sklearn.model_selection import BaseCrossValidator, StratifiedKFold
 from sklearn.utils import resample
 
-from matttools import stats
+from ._base import ArrayLike, ensure_array
+from .stats import mean_confidence_interval
 
-# Configure module logger
 logger = logging.getLogger(__name__)
 
+__all__ = [
+    "plot_curves",
+    "plot_curve_ci",
+    "plot_confusion_matrices",
+    "plot_model_results",
+    "plot_reduction",
+    "plot_scree",
+    "plot_training_probas",
+]
 
-# Plot dimensionality reduction
-def plot_reduction(
-    reduction,
-    X: pd.DataFrame,
-    y: pd.Series,
-    dim_1=0,
-    dim_2=1,
-    save_path=None,
-    figsize=(10, 10),
-    title=None,
-    labels=None,
-    *args,
-):
-    """
-    Summary: Function to plot the PCA model
 
-    pca (sklearn.decomposition.PCA) : sklearn PCA model
-    X (pd.DataFrame) : dataframe of features
-    y (pd.Series) : series of labels
-    components (int) : number of components to plot on y-axis
-    save_path (str) : string pointing where to save image
-    *args (tuple) : typle of arguments to pass to plt.scatter
-    """
-    # Check if reduction is a valid sklearn model
-    if not hasattr(reduction, "fit_transform"):
-        raise TypeError(f"{reduction} is not a valid sklearn model")
-
-    # Check if reduction is fitted
-    if not hasattr(reduction, "components_"):
-        raise ValueError(f"{reduction} must be fitted before plotting")
-
-    # Get the transformed data
-    X_reduced = reduction.transform(X)
-
-    # Plot the data
-    plt.figure(figsize=figsize)
-    plt.scatter(X_reduced[:, 0], X_reduced[:, 1], c=y, *args)
-
-    # Set title
-    if title:
-        plt.title(title)
-    else:
-        plt.title(f"{reduction.__class__.__name__} Plot")
-
-    # Handle explained variance ratio for different reduction types
-    if hasattr(reduction, "explained_variance_ratio_"):
-        plt.xlabel(
-            f"{reduction.__class__.__name__} {dim_1} [{reduction.explained_variance_ratio_[dim_1]*100:0.4f}%]"
-        )
-        plt.ylabel(
-            f"{reduction.__class__.__name__} {dim_2} [{reduction.explained_variance_ratio_[dim_2]*100:0.4f}%]"
-        )
-    else:
-        plt.xlabel(f"{reduction.__class__.__name__} {dim_1}")
-        plt.ylabel(f"{reduction.__class__.__name__} {dim_2}")
-
+def _save_or_show(save_path: Optional[Union[str, Path]], close: bool = True) -> None:
+    """Save figure or show it."""
     if save_path:
-        plt.savefig(save_path)
+        plt.savefig(save_path, bbox_inches="tight")
+        logger.info(f"Figure saved to {save_path}")
     else:
         plt.show()
+    if close:
+        plt.close()
+
+
+def plot_curves(
+    models: Dict[str, BaseEstimator],
+    X: ArrayLike,
+    y: ArrayLike,
+    curve_type: Literal["roc", "prc"] = "roc",
+    ax: Optional[plt.Axes] = None,
+    save_path: Optional[Union[str, Path]] = None,
+    figsize: Tuple[int, int] = (10, 10),
+) -> plt.Axes:
+    """Plot ROC or PR curves for multiple models.
+
+    Args:
+        models: Dictionary mapping model names to fitted estimators.
+        X: Feature data.
+        y: Target labels.
+        curve_type: "roc" for ROC curve, "prc" for Precision-Recall curve.
+        ax: Matplotlib axes. Creates new if None.
+        save_path: Path to save figure. Shows if None.
+        figsize: Figure size if creating new axes.
+
+    Returns:
+        The matplotlib Axes object.
+    """
+    X = ensure_array(X)
+    y = ensure_array(y)
+
+    if ax is None:
+        _, ax = plt.subplots(figsize=figsize)
+
+    for name, model in models.items():
+        y_score = model.predict_proba(X)[:, 1]
+
+        if curve_type == "roc":
+            fpr, tpr, _ = roc_curve(y, y_score)
+            score = auc(fpr, tpr)
+            ax.plot(fpr, tpr, label=f"{name} (AUC = {score:.2f})")
+        else:  # prc
+            precision, recall, _ = precision_recall_curve(y, y_score)
+            score = average_precision_score(y, y_score)
+            ax.plot(recall, precision, label=f"{name} (AP = {score:.2f})")
+
+    if curve_type == "roc":
+        ax.plot([0, 1], [0, 1], "k--", label="Chance (AUC = 0.5)")
+        ax.set_xlabel("False Positive Rate")
+        ax.set_ylabel("True Positive Rate")
+        ax.set_title("ROC Curves")
+    else:
+        ax.axhline(y=np.mean(y), color="k", linestyle="--", label="Chance")
+        ax.set_xlabel("Recall")
+        ax.set_ylabel("Precision")
+        ax.set_title("Precision-Recall Curves")
+
+    ax.legend(loc="best")
+
+    if save_path or ax is None:
+        _save_or_show(save_path, close=save_path is not None)
+
+    return ax
+
+
+def plot_curve_ci(
+    model: BaseEstimator,
+    X: ArrayLike,
+    y: ArrayLike,
+    curve_type: Literal["roc", "prc"] = "roc",
+    resampling: Literal["bootstrap", "cv"] = "bootstrap",
+    n_iterations: int = 100,
+    cv: Optional[Union[int, BaseCrossValidator]] = None,
+    ci: float = 0.95,
+    ax: Optional[plt.Axes] = None,
+    save_path: Optional[Union[str, Path]] = None,
+    figsize: Tuple[int, int] = (6, 6),
+    title: Optional[str] = None,
+) -> plt.Axes:
+    """Plot ROC or PR curve with confidence interval.
+
+    Args:
+        model: Sklearn model (fitted for bootstrap, unfitted for cv).
+        X: Feature data.
+        y: Target labels.
+        curve_type: "roc" or "prc".
+        resampling: "bootstrap" or "cv" for cross-validation.
+        n_iterations: Number of bootstrap iterations (ignored for cv).
+        cv: CV splitter for cross-validation mode.
+        ci: Confidence level (default 0.95).
+        ax: Matplotlib axes. Creates new if None.
+        save_path: Path to save figure.
+        figsize: Figure size if creating new axes.
+        title: Plot title. Auto-generated if None.
+
+    Returns:
+        The matplotlib Axes object.
+    """
+    X = ensure_array(X)
+    y = ensure_array(y)
+
+    if ax is None:
+        _, ax = plt.subplots(figsize=figsize)
+
+    mean_x = np.linspace(0, 1, 100)
+    curves = []
+    scores = []
+
+    if resampling == "cv":
+        if cv is None:
+            cv = StratifiedKFold(n_splits=5, shuffle=True)
+        elif isinstance(cv, int):
+            cv = StratifiedKFold(n_splits=cv, shuffle=True)
+        model = clone(model)
+        iterator = cv.split(X, y)
+    else:
+        iterator = range(n_iterations)
+
+    for item in iterator:
+        if resampling == "cv":
+            train_idx, test_idx = item
+            model.fit(X[train_idx], y[train_idx])
+            X_eval, y_eval = X[test_idx], y[test_idx]
+        else:
+            X_eval, y_eval = resample(X, y, stratify=y)
+
+        y_score = model.predict_proba(X_eval)[:, 1]
+
+        if curve_type == "roc":
+            x_vals, y_vals, _ = roc_curve(y_eval, y_score)
+            score = auc(x_vals, y_vals)
+            interp_y = np.interp(mean_x, x_vals, y_vals)
+            interp_y[0] = 0.0
+        else:
+            precision, recall, _ = precision_recall_curve(y_eval, y_score)
+            score = auc(recall, precision)
+            interp_y = np.interp(mean_x, recall[::-1], precision[::-1])
+            interp_y[0] = 1.0
+
+        curves.append(interp_y)
+        scores.append(score)
+
+    # Calculate mean and CI
+    mean_y, ci_y = mean_confidence_interval(curves, confidence=ci, axis=0)
+    mean_score, ci_score = mean_confidence_interval(scores, confidence=ci)
+
+    if curve_type == "roc":
+        mean_y[-1] = 1.0
+    else:
+        mean_y[-1] = 0.0
+
+    ci_half = ci_y[:, 1] - mean_y
+    score_ci = ci_score[0, 1] - mean_score
+
+    # Plot
+    if curve_type == "roc":
+        ax.plot([0, 1], [0, 1], "k--", label="Chance (AUC = 0.5)")
+        metric_name = "AUC"
+    else:
+        ax.axhline(y=np.mean(y), color="k", linestyle="--", label="Chance")
+        metric_name = "AP"
+
+    upper = np.minimum(mean_y + ci_half, 1)
+    lower = np.maximum(mean_y - ci_half, 0)
+    ax.fill_between(mean_x, lower, upper, color="grey", alpha=0.2, label=f"{int(ci*100)}% CI")
+    ax.plot(mean_x, mean_y, "b-", lw=2, label=f"{metric_name} = {float(mean_score):.2f} ± {float(score_ci):.2f}")
+
+    if curve_type == "roc":
+        ax.set_xlabel("False Positive Rate")
+        ax.set_ylabel("True Positive Rate")
+    else:
+        ax.set_xlabel("Recall")
+        ax.set_ylabel("Precision")
+
+    if title is None:
+        method = "Bootstrap" if resampling == "bootstrap" else "Cross-Validation"
+        curve_name = "ROC" if curve_type == "roc" else "PR"
+        title = f"{curve_name} Curve with {int(ci*100)}% CI ({method})"
+    ax.set_title(title)
+    ax.legend(loc="lower right" if curve_type == "roc" else "lower left")
+
+    if save_path or ax is None:
+        _save_or_show(save_path, close=save_path is not None)
+
+    return ax
+
+
+def plot_confusion_matrices(
+    models: Dict[str, BaseEstimator],
+    X: ArrayLike,
+    y: ArrayLike,
+    save_path: Optional[Union[str, Path]] = None,
+    figsize: Tuple[int, int] = (10, 10),
+) -> np.ndarray:
+    """Plot confusion matrices for multiple models.
+
+    Args:
+        models: Dictionary of fitted models.
+        X: Feature data.
+        y: Target labels.
+        save_path: Path to save figure.
+        figsize: Figure size.
+
+    Returns:
+        Array of Axes objects.
+    """
+    X = ensure_array(X)
+    y = ensure_array(y)
+
+    n = len(models)
+    ncols = int(np.ceil(np.sqrt(n)))
+    nrows = int(np.ceil(n / ncols))
+
+    fig, axes = plt.subplots(nrows=nrows, ncols=ncols, figsize=figsize, squeeze=False)
+
+    for idx, (name, model) in enumerate(models.items()):
+        row, col = idx // ncols, idx % ncols
+        y_pred = model.predict(X)
+        cm = confusion_matrix(y, y_pred)
+        disp = ConfusionMatrixDisplay(confusion_matrix=cm, display_labels=model.classes_)
+        disp.plot(ax=axes[row, col])
+        axes[row, col].set_title(name)
+
+    # Hide unused subplots
+    for idx in range(n, nrows * ncols):
+        row, col = idx // ncols, idx % ncols
+        axes[row, col].set_visible(False)
+
+    plt.tight_layout()
+    _save_or_show(save_path)
+
+    return axes
+
+
+def plot_model_results(
+    results: pd.DataFrame,
+    save_path: Optional[Union[str, Path]] = None,
+    figsize: Tuple[int, int] = (12, 8),
+    ax: Optional[plt.Axes] = None,
+) -> plt.Axes:
+    """Plot model comparison results with error bars.
+
+    Args:
+        results: DataFrame with columns: model, mean, std.
+        save_path: Path to save figure.
+        figsize: Figure size.
+        ax: Matplotlib axes.
+
+    Returns:
+        The matplotlib Axes object.
+    """
+    if ax is None:
+        _, ax = plt.subplots(figsize=figsize)
+
+    x = np.arange(len(results))
+    ax.bar(x, results["mean"], yerr=results["std"], capsize=5, alpha=0.8)
+    ax.set_xticks(x)
+    ax.set_xticklabels(results["model"], rotation=45, ha="right")
+    ax.set_xlabel("Model")
+    ax.set_ylabel("Score")
+    ax.set_title("Model Comparison")
+
+    plt.tight_layout()
+    if save_path or ax is None:
+        _save_or_show(save_path, close=save_path is not None)
+
+    return ax
+
+
+def plot_reduction(
+    reduction: BaseEstimator,
+    X: ArrayLike,
+    y: ArrayLike,
+    dim_1: int = 0,
+    dim_2: int = 1,
+    ax: Optional[plt.Axes] = None,
+    save_path: Optional[Union[str, Path]] = None,
+    figsize: Tuple[int, int] = (10, 10),
+    title: Optional[str] = None,
+    **scatter_kwargs,
+) -> plt.Axes:
+    """Plot dimensionality reduction results.
+
+    Args:
+        reduction: Fitted sklearn reduction model (PCA, TSNE, etc.).
+        X: Feature data.
+        y: Target labels for coloring.
+        dim_1: First dimension to plot.
+        dim_2: Second dimension to plot.
+        ax: Matplotlib axes.
+        save_path: Path to save figure.
+        figsize: Figure size.
+        title: Plot title.
+        **scatter_kwargs: Additional arguments for scatter plot.
+
+    Returns:
+        The matplotlib Axes object.
+
+    Raises:
+        TypeError: If reduction doesn't have fit_transform.
+        ValueError: If reduction is not fitted.
+    """
+    if not hasattr(reduction, "fit_transform"):
+        raise TypeError(f"{type(reduction).__name__} is not a valid sklearn model")
+    if not hasattr(reduction, "components_"):
+        raise ValueError("Reduction model must be fitted before plotting")
+
+    X = ensure_array(X)
+    y = ensure_array(y)
+    X_reduced = reduction.transform(X)
+
+    if ax is None:
+        _, ax = plt.subplots(figsize=figsize)
+
+    ax.scatter(X_reduced[:, dim_1], X_reduced[:, dim_2], c=y, **scatter_kwargs)
+
+    name = reduction.__class__.__name__
+    if hasattr(reduction, "explained_variance_ratio_"):
+        var1 = reduction.explained_variance_ratio_[dim_1] * 100
+        var2 = reduction.explained_variance_ratio_[dim_2] * 100
+        ax.set_xlabel(f"{name} {dim_1} [{var1:.2f}%]")
+        ax.set_ylabel(f"{name} {dim_2} [{var2:.2f}%]")
+    else:
+        ax.set_xlabel(f"{name} {dim_1}")
+        ax.set_ylabel(f"{name} {dim_2}")
+
+    ax.set_title(title or f"{name} Plot")
+
+    if save_path or ax is None:
+        _save_or_show(save_path, close=save_path is not None)
+
+    return ax
 
 
 def plot_scree(
     pca: PCA,
-    components: int = 50,
+    n_components: Optional[int] = None,
+    ax: Optional[plt.Axes] = None,
     save_path: Optional[Union[str, Path]] = None,
-    figsize: Tuple[int, int] = (10, 10),
-    **kwargs,
-) -> None:
-    """Plot the scree plot of a fitted PCA model.
+    figsize: Tuple[int, int] = (10, 6),
+    **plot_kwargs,
+) -> plt.Axes:
+    """Plot scree plot for PCA.
 
     Args:
-        pca: Fitted sklearn PCA model.
-        components: Maximum number of components to plot. Default is 50.
-        save_path: Path to save the figure. If None, displays the plot.
-        figsize: Figure size as (width, height). Default is (10, 10).
-        **kwargs: Additional keyword arguments passed to plt.plot.
+        pca: Fitted PCA model.
+        n_components: Number of components to plot. Default shows all.
+        ax: Matplotlib axes.
+        save_path: Path to save figure.
+        figsize: Figure size.
+        **plot_kwargs: Additional arguments for plot.
+
+    Returns:
+        The matplotlib Axes object.
 
     Raises:
-        ValueError: If PCA model is not fitted.
-
-    Example:
-        >>> from sklearn.decomposition import PCA
-        >>> pca = PCA(n_components=10).fit(X)
-        >>> plot_scree(pca, components=10)
+        ValueError: If PCA is not fitted.
     """
     if not hasattr(pca, "explained_variance_ratio_"):
-        raise ValueError("PCA model must be fitted before plotting")
+        raise ValueError("PCA must be fitted before plotting")
 
-    n_components = min(components, pca.n_components_)
+    if ax is None:
+        _, ax = plt.subplots(figsize=figsize)
 
-    plt.figure(figsize=figsize)
-    plt.plot(
-        np.arange(n_components),
-        pca.explained_variance_ratio_[:n_components],
-        "o-",
-        **kwargs,
-    )
-    plt.title("Scree Plot")
-    plt.xlabel("Principal Component")
-    plt.ylabel("Proportion of Variance Explained")
-    plt.grid(True, alpha=0.3)
+    n = min(n_components or pca.n_components_, pca.n_components_)
+    x = np.arange(n)
+    y = pca.explained_variance_ratio_[:n]
 
-    if save_path:
-        plt.savefig(save_path, bbox_inches="tight")
-        logger.info(f"Scree plot saved to {save_path}")
-    else:
-        plt.show()
-    plt.close()
+    ax.plot(x, y, "o-", **plot_kwargs)
+    ax.set_xlabel("Principal Component")
+    ax.set_ylabel("Variance Explained")
+    ax.set_title("Scree Plot")
+    ax.grid(True, alpha=0.3)
 
+    if save_path or ax is None:
+        _save_or_show(save_path, close=save_path is not None)
 
-######################################################################
-#
-#           Plotting Curves and Metrics of dict of models
-#
-######################################################################
-# Function to plot the results of the test_models function with a barplot mean and error bars
-def plot_model_results(results, output_path=None, figsize=(12, 8)):
-    """
-    Summary: Function to plot the results of the test_models function with a barplot mean and error bars
+    return ax
 
-    results (pd.DataFrame) : dataframe of model metrics
-    figsize (tuple) : size of the plot
 
-    output (None) : None
-    """
-    # Create a figure
-    fig, ax = plt.subplots(figsize=figsize)
-    # Plot the results
-    sns.barplot(x="model", y="mean", data=results, yerr=results["std"], ax=ax)
-    # Set the title
-    ax.set_title("Model Results")
-    # Set the x and y labels
-    ax.set_xlabel("Model")
-    ax.set_ylabel("Mean Score")
-    # Show the plot
-    if output_path:
-        plt.savefig(output_path)
-    else:
-        plt.show()
-
-
-# Function to plot the ROC curves of each model
-def plot_roc_curves(models, X, y, output_path=None, figsize=(10, 10)):
-    """
-    Summary: Function to plot the ROC curves of each model
-
-    models (dict) : dictionary of models to test
-    X (np.array) : numpy array of feature data
-    y (np.array) : numpy array of target data
-    figsize (tuple) : size of the plot
-
-    output (None) : None
-    """
-    # Create a figure
-    fig, ax = plt.subplots(figsize=figsize)
-    # Iterate through the models
-    for model_name, model in models.items():
-        # Get the predicted probabilities
-        y_pred = model.predict_proba(X)[:, 1]
-        # Get the ROC curve
-        fpr, tpr, _ = roc_curve(y, y_pred)
-        # Get the AUC
-        roc_auc = auc(fpr, tpr)
-        # Plot the ROC curve
-        ax.plot(fpr, tpr, label=f"{model_name} (AUC = {roc_auc:0.2f})")
-    # Set the title
-    ax.set_title("ROC Curves")
-    # Set the x and y labels
-    ax.set_xlabel("False Positive Rate")
-    ax.set_ylabel("True Positive Rate")
-    # Set the legend
-    ax.legend()
-    # Show the plot
-    if output_path:
-        plt.savefig(output_path)
-    else:
-        plt.show()
-
-
-# Function to plot the ROC curves of each model
-def plot_prc_curves(models, X, y, output_path=None, figsize=(10, 10)):
-    """
-    Summary: Function to plot the PRC curves of each model
-
-    models (dict) : dictionary of models to test
-    X (np.array) : numpy array of feature data
-    y (np.array) : numpy array of target data
-    figsize (tuple) : size of the plot
-
-    output (None) : None
-    """
-    # Create a figure
-    fig, ax = plt.subplots(figsize=figsize)
-    # Iterate through the models
-    for model_name, model in models.items():
-        # Get the predicted probabilities
-        y_pred = model.predict_proba(X)[:, 1]
-        # Get the PR curve
-        precision, recall, _ = precision_recall_curve(y, y_pred)
-        # Get the average precision
-        avg_precision = average_precision_score(y, y_pred)
-        # Plot the PR curve
-        ax.plot(recall, precision, label=f"{model_name} (AP = {avg_precision:0.2f})")
-    # Set the title
-    ax.set_title("PRC Curves")
-    # Set the x and y labels
-    ax.set_xlabel("Recall")
-    ax.set_ylabel("Precision")
-    # Set the legend
-    ax.legend()
-    # Show the plot
-    if output_path:
-        plt.savefig(output_path)
-    else:
-        plt.show()
-
-
-# Function to plot the confusion matrix of a dictionary of models in a grid square
-def plot_confusion_matrices(models, X, y, output_path=None, figsize=(10, 10)):
-    """
-    Summary: Function to plot the confusion matrix of a dictionary of models in a grid
-
-    models (dict) : dictionary of models to test
-    X (np.array) : numpy array of feature data
-    y (np.array) : numpy array of target data
-    figsize (tuple) : size of the plot
-
-    output (None) : None
-    """
-    # Calculate the number of rows and columns based on the number of models
-    num_models = len(models)
-    nrows = int(num_models**0.5)
-    ncols = int(np.ceil(num_models / nrows))
-    # Create a figure with subplots
-    fig, axes = plt.subplots(nrows=nrows, ncols=ncols, figsize=figsize)
-    # Iterate through the models and subplots
-    for i, (model_name, model) in enumerate(models.items()):
-        # Calculate the row and column index of the subplot
-        row_idx = i // ncols
-        col_idx = i % ncols
-        # Get the predicted values
-        y_pred = model.predict(X)
-        # Get the confusion matrix
-        cm = confusion_matrix(y, y_pred)
-        # Plot the confusion matrix on the appropriate subplot
-        disp = ConfusionMatrixDisplay(
-            confusion_matrix=cm, display_labels=model.classes_
-        )
-        disp.plot(ax=axes[row_idx, col_idx])
-        # Set the title
-        axes[row_idx, col_idx].set_title(model_name)
-    # Adjust spacing between subplots
-    plt.subplots_adjust(hspace=0.4, wspace=0.4)
-    # Show the plot
-    if output_path:
-        plt.savefig(output_path)
-    else:
-        plt.show()
-
-
-# Function to plot prediction probabilities of a dictionary of models
-
-
-######################################################################
-#
-#            Plotting Curves and Metrics of single models
-#
-######################################################################
-def plot_roc_curve(y_true, score, save_path=None):
-    """
-    y_true (np.array) : numpy array of the testing labels
-    score (np.array) : numpy array of the prediction values (using model.predict_proba)
-    save_path (str) : string pointing where to save image
-    """
-    fpr, tpr, _ = roc_curve(y_true, score)
-    roc_auc = auc(fpr, tpr)
-    roc_display = RocCurveDisplay(fpr=fpr, tpr=tpr, roc_auc=roc_auc).plot()
-    plt.title("ROC Curve", fontsize=14)
-    if save_path:
-        plt.savefig(save_path)
-    else:
-        plt.show()
-
-
-def plot_confusion_matrix(y_true, score, save_path=None, labels=None):
-    """
-    y_true (np.array) : numpy array of the testing labels
-    score (np.array) : predictions of model (using model.predict)
-    save_path (str) : string pointing where to save image
-    labels (list) : list of labels used for classes
-    """
-    cm = confusion_matrix(y_true, score)
-    cm_display = ConfusionMatrixDisplay(cm, display_labels=labels).plot()
-    plt.title("Confusion Matrix", fontsize=14)
-    if save_path:
-        plt.savefig(save_path)
-    else:
-        plt.show()
-
-
-# Function to plot ROC curve with mean and 95% confidence interval from bootstrapping
-def plot_roc_curve_ci(
-    model,
-    X,
-    y,
-    bootstraps=100,
-    title="Mean ROC curve with 95% Confidence Interval",
-    save_path=None,
-    *args,
-):
-    """
-    Plot ROC curve with mean and 95% confidence interval from bootstrapping.
-    Parameters:
-    -----------
-    model : sklearn model
-        Model to be used for cross validation.
-    X : numpy array or pandas DataFrame
-        Features used.
-    y : numpy array
-        Labels used for classes.
-    cv : resampling technique, default=StratifiedKFold(n_splits=5)
-        Cross validation object to be used.
-    title : str, default="Mean ROC curve with 95% Confidence Interval"
-        Title of plot.
-    save_path : str, default=None
-        String pointing where to save image.
-    *args : dict
-        Additional keyword arguments to pass to the plot function.
-    """
-    # Convert X to numpy array
-    if not isinstance(X, np.ndarray):
-        try:
-            X = X.to_numpy()
-        except:
-            raise ValueError("X must be convertable to numpy array")
-
-    # Calculate ROC curve for each fold
-    tprs = []
-    aucs = []
-    fprs = []
-    mean_fpr = np.linspace(0, 1, 100)
-    fig, ax = plt.subplots(figsize=(6, 6))
-    for i in range(bootstraps):
-        _X, _y = resample(X, y, stratify=y)
-        # predict probabilities
-        yhat = model.predict_proba(_X)
-
-        # keep probabilities for the positive outcome only
-        yhat = yhat[:, 1]
-
-        # calculate roc curves
-        fpr, tpr, _ = roc_curve(_y, yhat)
-
-        # calculate AUC and interp TPR
-        roc_auc = auc(fpr, tpr)
-        interp_tpr = np.interp(mean_fpr, fpr, tpr)
-        interp_tpr[0] = 0.0
-
-        # append to lists
-        tprs.append(interp_tpr)
-        aucs.append(roc_auc)
-        fprs.append(fpr)
-
-    # Plot chance level
-    ax.plot([0, 1], [0, 1], "k--", label="chance level (AUC = 0.5)")
-
-    # Plot mean ROC curve with 95% confidence interval
-    mean_tpr = np.mean(tprs, axis=0)
-    mean_tpr[-1] = 1.0
-
-    # Calculate confidence intervals
-    mean_auc, ci_auc = stats.mean_confidence_interval(aucs, confidence=0.95)
-    mean_tpr, ci_tpr = stats.mean_confidence_interval(tprs, confidence=0.95, axis=0)
-    mean_tpr[-1] = 1.0
-
-    # get the confidence intervals out of the array
-    ci_auc = ci_auc[0, 1] - mean_auc
-    ci_tpr = ci_tpr[:, 1] - mean_tpr
-
-    # Plot confidence interval
-    tprs_upper = np.minimum(mean_tpr + ci_tpr, 1)
-    tprs_lower = np.maximum(mean_tpr - ci_tpr, 0)
-    ax.fill_between(
-        mean_fpr,
-        tprs_lower,
-        tprs_upper,
-        color="grey",
-        alpha=0.2,
-        label="95% Confidence Interval",
-    )
-
-    # Plot mean ROC curve
-    ax.plot(
-        mean_fpr,
-        mean_tpr,
-        color="b",
-        label=f"ROC (AUC = {mean_auc.item():.2f} ± {ci_auc.item():.2f})",
-        lw=2,
-        alpha=0.8,
-        *args,
-    )
-    ax.set(
-        xlabel="False Positive Rate",
-        ylabel="True Positive Rate",
-        title=title,
-        aspect="equal",
-    )
-    ax.legend(loc="lower right")
-
-    if save_path:
-        plt.savefig(save_path)
-    else:
-        plt.show()
-
-
-# Function to plot the PRC curve of a model
-def plot_prc_curve(model, X, y, save_path=None, title="Precision-Recall Curve", *args):
-    """
-    Plot the precision-recall curve of a model.
-    Parameters:
-    -----------
-    model : sklearn model
-        Model to be used for cross validation.
-    X : numpy array or pandas DataFrame
-        Features used.
-    y : numpy array
-        Labels used for classes.
-    save_path : str, default=None
-        String pointing where to save image.
-    title : str, default="Precision-Recall Curve"
-        Title of plot.
-    *args : dict
-        Additional keyword arguments to pass to the plot function.
-    """
-    # Convert X to numpy array
-    if not isinstance(X, np.ndarray):
-        try:
-            X = X.to_numpy()
-        except:
-            raise ValueError("X must be convertable to numpy array")
-
-    # predict probabilities
-    yhat = model.predict_proba(X)
-
-    # keep probabilities for the positive outcome only
-    yhat = yhat[:, 1]
-
-    # calculate precision-recall curve
-    precision, recall, _ = precision_recall_curve(y, yhat)
-
-    # calculate average precision score
-    avg_precision = average_precision_score(y, yhat)
-
-    # plot the curve
-    plt.plot(recall, precision, marker=".", label=f"AP = {avg_precision:.2f}", *args)
-    plt.xlabel("Recall")
-    plt.ylabel("Precision")
-    plt.title(title)
-    plt.legend()
-    if save_path:
-        plt.savefig(save_path)
-    else:
-        plt.show()
-
-
-# Function to plot the decision boundaries of a model
-def plot_decision_boundaries(
-    model, X, y, figsize=(10, 10), feature_one=0, feature_two=1
-):
-    """
-    ######### WIP!!! #########
-    Summary: Function to plot the decision boundaries of a model
-
-    model (sklearn model) : sklearn model or pipeline
-    X (np.array) : numpy array of feature data
-    y (np.array) : numpy array of target data
-    figsize (tuple) : size of the plot
-    n_features (int) : number of features to use (only supports 2 for now)
-
-    output (None) : None
-    """
-    # Create a figure
-    fig, ax = plt.subplots(figsize=figsize)
-    # Fit the model
-    model.fit(X, y)
-    # Get the minimum and maximum values for the first feature
-    x_min, x_max = X[:, feature_one].min() - 1, X[:, 0].max() + 1
-    # Get the minimum and maximum values for the second feature
-    y_min, y_max = X[:, feature_two].min() - 1, X[:, 1].max() + 1
-    # Create a meshgrid
-    xx, yy = np.meshgrid(np.arange(x_min, x_max, 0.1), np.arange(y_min, y_max, 0.1))
-    # Get the predicted values
-    Z = model.predict(np.c_[xx.ravel(), yy.ravel()])
-    # Reshape the predicted values
-    Z = Z.reshape(xx.shape)
-    # Plot the decision boundary
-    ax.contourf(xx, yy, Z, alpha=0.4)
-    # Plot the data points
-    ax.scatter(X[:, 0], X[:, 1], c=y, alpha=0.8)
-    # Set the title
-    ax.set_title("Decision Boundaries")
-    # Set the x and y labels
-    ax.set_xlabel(f"Feature 1")
-    ax.set_ylabel(f"Feature 2")
-    # Show the plot
-    plt.show()
-
-
-# Function to plot ROC curve with mean and 95% confidence interval from cross-validation
-def plot_cross_validation_auroc(
-    model,
-    X,
-    y,
-    cv=StratifiedKFold(n_splits=5),
-    title="Mean ROC curve with 95% Confidence Interval",
-    save_path=None,
-    *args,
-):
-    """
-    Plot ROC curve with mean and 95% confidence interval from cross-validation.
-
-    Parameters:
-    -----------
-    model : sklearn model
-        Model to be used for cross validation.
-    X : numpy array or pandas DataFrame
-        Features used.
-    y : numpy array
-        Labels used for classes.
-    cv : resampling technique, default=StratifiedKFold(n_splits=5)
-        Cross validation object to be used.
-    title : str, default="Mean ROC curve with 95% Confidence Interval"
-        Title of plot.
-    save_path : str, default=None
-        String pointing where to save image.
-    *args : dict
-        Additional arguments to pass to the plot function
-    """
-    # Convert X to numpy array
-    if not isinstance(X, np.ndarray):
-        try:
-            X = X.to_numpy()
-        except:
-            raise ValueError("X must be convertable to numpy array")
-
-    # Clone the model
-    model = clone(model)
-
-    # Calculate ROC curve for each fold
-    tprs = []
-    aucs = []
-    mean_fpr = np.linspace(0, 1, 100)
-    fig, ax = plt.subplots(figsize=(6, 6))
-    for fold, (train, test) in enumerate(cv.split(X, y)):
-        # Fit model
-        model.fit(X[train], y[train])
-
-        # Get roc curve
-        preds = model.predict_proba(X[test])
-        preds = preds[:, 1]
-
-        # Get the accuracy
-        acc = model.score(X[test], y[test])
-
-        # Get the ROC curve
-        fpr, tpr, _ = roc_curve(y[test], preds)
-        roc_auc = auc(fpr, tpr)
-
-        # Interpolate the ROC curve
-        interp_tpr = np.interp(mean_fpr, fpr, tpr)
-        interp_tpr[0] = 0.0
-
-        # replace any values over 1 with 1
-        interp_tpr[interp_tpr > 1] = 1
-
-        # append to lists
-        tprs.append(interp_tpr)
-        aucs.append(roc_auc)
-
-    # Plot chance level
-    ax.plot([0, 1], [0, 1], "k--", label="chance level (AUC = 0.5)")
-
-    # Plot mean ROC curve with 95% confidence interval
-    mean_tpr = np.mean(tprs, axis=0)
-    mean_tpr[-1] = 1.0
-
-    # Calculate confidence intervals
-    mean_auc, ci_auc = stats.mean_confidence_interval(aucs, confidence=0.95)
-    mean_tpr, ci_tpr = stats.mean_confidence_interval(tprs, confidence=0.95, axis=0)
-    mean_tpr[-1] = 1.0
-
-    # get the confidence intervals out of the array
-    ci_auc = ci_auc[0, 1] - mean_auc
-    ci_tpr = ci_tpr[:, 1] - mean_tpr
-
-    # Plot confidence intervals
-    tprs_upper = np.minimum(mean_tpr + ci_tpr, 1)
-    tprs_lower = np.maximum(mean_tpr - ci_tpr, 0)
-    ax.fill_between(
-        mean_fpr,
-        tprs_lower,
-        tprs_upper,
-        color="grey",
-        alpha=0.2,
-        label="95% Confidence Interval",
-    )
-
-    # Plot mean ROC curve
-    ax.plot(
-        mean_fpr,
-        mean_tpr,
-        color="b",
-        label=f"ROC (AUC = {mean_auc.item():.2f} ± {ci_auc.item():.2f})",
-        lw=2,
-        alpha=0.8,
-    )
-    ax.set(
-        xlabel="False Positive Rate",
-        ylabel="True Positive Rate",
-        title=title,
-        aspect="equal",
-    )
-    ax.legend(loc="lower right")
-
-    if save_path:
-        plt.savefig(save_path)
-    else:
-        plt.show()
-
-
-# Function to plot Precision-Recall curve with mean and 95% confidence interval from bootstrapping
-def plot_pr_curve_ci(
-    model,
-    X,
-    y,
-    bootstraps=100,
-    title="Mean Precision-Recall curve with 95% Confidence Interval",
-    save_path=None,
-    *args,
-):
-    """
-    Plot Precision-Recall curve with mean and 95% confidence interval from bootstrapping.
-    Parameters:
-    -----------
-    model : sklearn model
-        Model to be used for cross validation.
-    X : numpy array or pandas DataFrame
-        Features used.
-    y : numpy array
-        Labels used for classes.
-    title : str, default="Mean Precision-Recall curve with 95% Confidence Interval"
-        Title of plot.
-    save_path : str, default=None
-        String pointing where to save image.
-    *args : dict
-        Additional keyword arguments to pass to the plot function.
-    """
-    # Convert X to numpy array
-    if not isinstance(X, np.ndarray):
-        try:
-            X = X.to_numpy()
-        except:
-            raise ValueError("X must be convertible to numpy array")
-
-    # Calculate PR curve for each fold
-    precisions = []
-    aucs = []
-    recalls = []
-    mean_recall = np.linspace(0, 1, 100)
-    fig, ax = plt.subplots(figsize=(6, 6))
-    for i in range(bootstraps):
-        _X, _y = resample(X, y, stratify=y)
-        # predict probabilities
-        yhat = model.predict_proba(_X)
-
-        # keep probabilities for the positive outcome only
-        yhat = yhat[:, 1]
-
-        # calculate PR curves
-        precision, recall, _ = precision_recall_curve(_y, yhat)
-
-        # calculate AUC and interp precision
-        pr_auc = auc(recall, precision)
-        interp_precision = np.interp(mean_recall, recall[::-1], precision[::-1])
-        interp_precision[0] = 1.0
-
-        # append to lists
-        precisions.append(interp_precision)
-        aucs.append(pr_auc)
-        recalls.append(recall)
-
-    # Plot chance level
-    ax.plot([0, 1], [np.mean(y), np.mean(y)], "k--", label="chance level (AUC = 0.5)")
-
-    # Plot mean PR curve with 95% confidence interval
-    mean_precision = np.mean(precisions, axis=0)
-    mean_precision[-1] = 0.0
-
-    # Calculate confidence intervals
-    mean_auc, ci_auc = stats.mean_confidence_interval(aucs, confidence=0.95)
-    mean_precision, ci_precision = stats.mean_confidence_interval(
-        precisions, confidence=0.95, axis=0
-    )
-    mean_precision[-1] = 0.0
-
-    # get the confidence intervals out of the array
-    ci_auc = ci_auc[0, 1] - mean_auc
-    ci_precision = ci_precision[:, 1] - mean_precision
-
-    # Plot confidence interval
-    precisions_upper = np.minimum(mean_precision + ci_precision, 1)
-    precisions_lower = np.maximum(mean_precision - ci_precision, 0)
-    ax.fill_between(
-        mean_recall,
-        precisions_lower,
-        precisions_upper,
-        color="grey",
-        alpha=0.2,
-        label="95% Confidence Interval",
-    )
-
-    # Plot mean PR curve
-    ax.plot(
-        mean_recall,
-        mean_precision,
-        color="b",
-        label=f"PR (AUC = {mean_auc.item():.2f} ± {ci_auc.item():.2f})",
-        lw=2,
-        alpha=0.8,
-        *args,
-    )
-    ax.set(xlabel="Recall", ylabel="Precision", title=title, aspect="equal")
-    ax.legend(loc="lower left")
-
-    if save_path:
-        plt.savefig(save_path)
-    else:
-        plt.show()
-
-
-# =================================================================================================
-#
-#                        Plotting Training Functions
-# =================================================================================================
-# Function to plot ROC curve with mean and 95% confidence interval from cross-validation
-def plot_training_roc_curve_ci(
-    model,
-    X,
-    y,
-    cv=StratifiedKFold(n_splits=5),
-    title="Mean ROC curve with 95% Confidence Interval",
-    save_path=None,
-    *args,
-):
-    """
-    Plot ROC curve with mean and 95% confidence interval from cross-validation.
-
-    Parameters:
-    -----------
-    model : sklearn model
-        Model to be used for cross validation.
-    X : numpy array or pandas DataFrame
-        Features used.
-    y : numpy array
-        Labels used for classes.
-    cv : resampling technique, default=StratifiedKFold(n_splits=5)
-        Cross validation object to be used.
-    title : str, default="Mean ROC curve with 95% Confidence Interval"
-        Title of plot.
-    save_path : str, default=None
-        String pointing where to save image.
-    *args : dict
-        Additional arguments to pass to the plot function
-    """
-    # add warning that function will go defunct
-    print(
-        "This function will be defunct in the future. Please use plot_cross_validation_auroc instead."
-    )
-
-    # Convert X to numpy array
-    if not isinstance(X, np.ndarray):
-        try:
-            X = X.to_numpy()
-        except:
-            raise ValueError("X must be convertable to numpy array")
-
-    # Clone the model
-    model = clone(model)
-
-    # Calculate ROC curve for each fold
-    tprs = []
-    aucs = []
-    mean_fpr = np.linspace(0, 1, 100)
-    fig, ax = plt.subplots(figsize=(6, 6))
-    for fold, (train, test) in enumerate(cv.split(X, y)):
-        # Fit model
-        model.fit(X[train], y[train])
-
-        # Get roc curve
-        preds = model.predict_proba(X[test])
-        preds = preds[:, 1]
-
-        # Get the accuracy
-        acc = model.score(X[test], y[test])
-
-        # Get the ROC curve
-        fpr, tpr, _ = roc_curve(y[test], preds)
-        roc_auc = auc(fpr, tpr)
-
-        # Interpolate the ROC curve
-        interp_tpr = np.interp(mean_fpr, fpr, tpr)
-        interp_tpr[0] = 0.0
-
-        # replace any values over 1 with 1
-        interp_tpr[interp_tpr > 1] = 1
-
-        # append to lists
-        tprs.append(interp_tpr)
-        aucs.append(roc_auc)
-
-    # Plot chance level
-    ax.plot([0, 1], [0, 1], "k--", label="chance level (AUC = 0.5)")
-
-    # Plot mean ROC curve with 95% confidence interval
-    mean_tpr = np.mean(tprs, axis=0)
-    mean_tpr[-1] = 1.0
-
-    # Calculate confidence intervals
-    mean_auc, ci_auc = stats.mean_confidence_interval(aucs, confidence=0.95)
-    mean_tpr, ci_tpr = stats.mean_confidence_interval(tprs, confidence=0.95, axis=0)
-    mean_tpr[-1] = 1.0
-
-    # get the confidence intervals out of the array
-    ci_auc = ci_auc[0, 1] - mean_auc
-    ci_tpr = ci_tpr[:, 1] - mean_tpr
-
-    # Plot confidence intervals
-    tprs_upper = np.minimum(mean_tpr + ci_tpr, 1)
-    tprs_lower = np.maximum(mean_tpr - ci_tpr, 0)
-    ax.fill_between(
-        mean_fpr,
-        tprs_lower,
-        tprs_upper,
-        color="grey",
-        alpha=0.2,
-        label="95% Confidence Interval",
-    )
-
-    # Plot mean ROC curve
-    ax.plot(
-        mean_fpr,
-        mean_tpr,
-        color="b",
-        label=f"ROC (AUC = {mean_auc.item():.2f} ± {ci_auc.item():.2f})",
-        lw=2,
-        alpha=0.8,
-    )
-    ax.set(
-        xlabel="False Positive Rate",
-        ylabel="True Positive Rate",
-        title=title,
-        aspect="equal",
-    )
-    ax.legend(loc="lower right")
-
-    if save_path:
-        plt.savefig(save_path)
-    else:
-        plt.show()
-
-
-# Function to plot the test probabilities of a model using cross validation
 def plot_training_probas(
-    model,
-    X,
-    y,
-    cv=StratifiedKFold(n_splits=5),
-    plot=sns.boxplot,
-    save_path=None,
-    title=None,
-    *args,
-):
-    """
-    Summary:
-    --------
-    Plots the training probabilities of a model using cross validation
+    model: BaseEstimator,
+    X: ArrayLike,
+    y: ArrayLike,
+    cv: Optional[Union[int, BaseCrossValidator]] = None,
+    ax: Optional[plt.Axes] = None,
+    save_path: Optional[Union[str, Path]] = None,
+    figsize: Tuple[int, int] = (8, 6),
+    title: Optional[str] = None,
+) -> Tuple[plt.Axes, pd.DataFrame]:
+    """Plot prediction probability distributions by class.
 
-    Parameters:
-    -----------
-    model (sklearn model) : sklearn model to be used
-    X (np.array or pd.DataFrame) : np array of features used
-    y (np.array) : list of labels used for classes
-    cv (resampler) : resampler to use for cross validation
-    plot (sns plot) : seaborn plot to use
-    save_path (str) : path to save plot to
-    *args (dict) : *args to pass to seaborn plot
-    """
-    # check if X is a numpy array
-    if not isinstance(X, np.ndarray):
-        try:
-            X = X.to_numpy()
-        except:
-            raise TypeError("X must be a numpy array or convertible to one")
+    Args:
+        model: Sklearn model (will be cloned and trained).
+        X: Feature data.
+        y: Target labels.
+        cv: CV splitter or number of folds.
+        ax: Matplotlib axes.
+        save_path: Path to save figure.
+        figsize: Figure size.
+        title: Plot title.
 
-    # CV setup
+    Returns:
+        Tuple of (Axes, DataFrame with predictions).
+    """
+    X = ensure_array(X)
+    y = ensure_array(y)
+
+    if cv is None:
+        cv = StratifiedKFold(n_splits=5, shuffle=True)
+    elif isinstance(cv, int):
+        cv = StratifiedKFold(n_splits=cv, shuffle=True)
+
     model = clone(model)
+    preds, labels = [], []
 
-    # get scores
-    scores = []
-    labels = []
-    for fold, (train, test) in enumerate(cv.split(X, y)):
-        model.fit(X[train], y[train])
+    for train_idx, test_idx in cv.split(X, y):
+        model.fit(X[train_idx], y[train_idx])
+        preds.extend(model.predict_proba(X[test_idx])[:, 1])
+        labels.extend(y[test_idx])
 
-        labels += list(y[test])
-        scores += list(model.predict_proba(X[test])[:, 1])
+    df = pd.DataFrame({"preds": preds, "labels": labels})
 
-    # convert to dataframe
-    df = pd.DataFrame({"preds": scores})
-    df["labels"] = labels
+    if ax is None:
+        _, ax = plt.subplots(figsize=figsize)
 
-    # set title
-    if not title:
-        title = "Distribution of Prediction Scores by Class"
+    sns.boxplot(data=df, x="labels", y="preds", ax=ax)
+    ax.set_xlabel("Class")
+    ax.set_ylabel("Prediction Score")
+    ax.set_title(title or "Prediction Score Distribution by Class")
 
-    # plot the data
-    sns.set_theme(style="whitegrid", palette="colorblind")
-    ax = plot(df, x="labels", y="preds", order=np.unique(df["labels"]), *args)
-    ax.set(ylabel="Prediction Score", xlabel="Labels", title=title)
+    if save_path or ax is None:
+        _save_or_show(save_path, close=save_path is not None)
 
-    # statistical annotation
-    groups = [
-        df.loc[df["labels"] == label, "preds"] for label in np.unique(df["labels"])
-    ]
-    kruskal_wallis = wilcoxon(*groups)
-    if kruskal_wallis.pvalue < 0.05:
-        x1, x2 = 0, 1
-        y, h = df["preds"].max() + 0.02, 0.01
-        ax.plot([x1, x1, x2, x2], [y, y + h, y + h, y], lw=1.2, c="k")
-        ax.text(
-            (x1 + x2) * 0.5,
-            y + h,
-            f"p = {kruskal_wallis.pvalue:.4f}",
-            ha="center",
-            va="bottom",
-            color="k",
-        )
-
-    # save or show
-    if save_path:
-        plt.savefig(save_path)
-    else:
-        plt.show()
-
-    return df
+    return ax, df

@@ -51,15 +51,15 @@ class TestBootstrap:
 
     def test_bootstrap_initialization(self):
         """Test Bootstrap class initialization."""
-        bootstrap = Bootstrap(n_bootstrap=100, stratified=True, rng_seed=42)
+        bootstrap = Bootstrap(n_bootstrap=100, stratified=True, random_state=42)
         assert bootstrap.n_bootstrap == 100
         assert bootstrap.stratified == True
-        assert bootstrap.rng_seed == 42
+        assert bootstrap.random_state == 42
 
     def test_bootstrap_split(self, sample_data):
         """Test bootstrap split functionality."""
         X, y = sample_data
-        bootstrap = Bootstrap(n_bootstrap=10, rng_seed=42)
+        bootstrap = Bootstrap(n_bootstrap=10, random_state=42)
 
         splits = list(bootstrap.split(X, y))
         assert len(splits) == 10
@@ -72,7 +72,7 @@ class TestBootstrap:
     def test_bootstrap_stratified(self, sample_data):
         """Test stratified bootstrap."""
         X, y = sample_data
-        bootstrap = Bootstrap(n_bootstrap=5, stratified=True, rng_seed=42)
+        bootstrap = Bootstrap(n_bootstrap=5, stratified=True, random_state=42)
 
         splits = list(bootstrap.split(X, y))
 

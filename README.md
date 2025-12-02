@@ -8,7 +8,7 @@ Python toolkit for ML and bioinformatics: statistical analysis, model evaluation
 # pip
 pip install git+https://github.com/mattmuller0/MattTools.git
 
-# uv (faster)
+# uv
 uv pip install git+https://github.com/mattmuller0/MattTools.git
 ```
 
